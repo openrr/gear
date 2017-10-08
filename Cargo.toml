@@ -1,0 +1,17 @@
+[package]
+name = "ugok"
+version = "0.1.0"
+authors = ["Takashi Ogura <t.ogura@gmail.com>"]
+
+[dependencies]
+assimp = "0.2.0"
+k = { path = "../k", version = "0.0.7" }
+log = "0.3.8"
+nalgebra = "0.13.0"
+ncollide = "0.13.0"
+rrt = "0.1.1"
+urdf-rs = { path = "../urdf-rs", version = "0.1.6" }
+
+[dev-dependencies]
+kiss3d = "0.11.0"
+glfw = "0.15.0"
