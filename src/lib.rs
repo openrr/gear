@@ -2,6 +2,7 @@ extern crate assimp;
 extern crate k;
 extern crate nalgebra as na;
 extern crate ncollide;
+extern crate rand;
 extern crate rrt;
 extern crate urdf_rs;
 #[macro_use]
@@ -15,7 +16,6 @@ use na::{Isometry3, Vector3, Real, Translation3, UnitQuaternion};
 use ncollide::ncollide_geometry::query::Proximity;
 use ncollide::query;
 use ncollide::shape::{Shape, ShapeHandle, Cuboid, Ball, Cylinder, TriMesh, Compound};
-//use rrt::dual_rrt_connect;
 use std::collections::HashMap;
 use std::path::Path;
 use std::sync::Arc;
@@ -151,7 +151,7 @@ impl<T> CollisionChecker<T>
             prediction: prediction,
         }
     }
-    pub fn get_collision_link_names(&self,
+    pub fn get_colliding_link_names(&self,
                                     robot: &k::LinkTree<T>,
                                     target_shape: &Shape<na::Point3<T>, na::Isometry3<T>>,
                                     target_pose: &na::Isometry3<T>)
@@ -180,6 +180,86 @@ impl<T> CollisionChecker<T>
             }
         }
         names
+    }
+}
+
+pub fn generate_random_joint_angles_from_limits<T>(limits: &Vec<Option<k::Range<T>>>) -> Vec<T>
+    where T: Real + rand::Rand
+{
+    limits
+        .iter()
+        .map(|range| match *range {
+                 Some(ref range) => {
+                     (range.max - range.min) * na::convert(rand::random()) + range.min
+                 }
+                 None => (rand::random::<T>() - na::convert(0.5)) * na::convert(2.0),
+             })
+        .collect()
+}
+
+
+pub struct CollisionAvoidJointPathPlanner {
+    robot: k::LinkTree<f64>,
+    pub collision_checker: CollisionChecker<f64>,
+    pub step_length: f64,
+    pub max_try: usize,
+}
+
+impl CollisionAvoidJointPathPlanner {
+    pub fn new(robot: k::LinkTree<f64>, collision_checker: CollisionChecker<f64>) -> Self {
+        CollisionAvoidJointPathPlanner {
+            robot: robot,
+            collision_checker: collision_checker,
+            step_length: 0.05,
+            max_try: 1000,
+        }
+    }
+    pub fn is_feasible(&mut self,
+                       joint_angles: &[f64],
+                       target_shape: &Shape<na::Point3<f64>, na::Isometry3<f64>>,
+                       target_pose: &na::Isometry3<f64>)
+                       -> bool {
+        self.set_joint_angles(joint_angles).unwrap();
+        self.get_colliding_link_names(target_shape, target_pose)
+            .is_empty()
+    }
+    pub fn set_joint_angles(&mut self,
+                            joint_angles: &[f64])
+                            -> std::result::Result<(), k::JointError> {
+        self.robot.set_joint_angles(joint_angles)
+    }
+    pub fn get_joint_angles(&self) -> Vec<f64> {
+        self.robot.get_joint_angles()
+    }
+    pub fn get_colliding_link_names(&self,
+                                    target_shape: &Shape<na::Point3<f64>, na::Isometry3<f64>>,
+                                    target_pose: &na::Isometry3<f64>)
+                                    -> Vec<String> {
+        self.collision_checker
+            .get_colliding_link_names(&self.robot, target_shape, target_pose)
+    }
+    pub fn plan(&mut self,
+                goal_angles: &[f64],
+                target_shape: &Shape<na::Point3<f64>, na::Isometry3<f64>>,
+                target_pose: &na::Isometry3<f64>)
+                -> std::result::Result<Vec<Vec<f64>>, String> {
+        let initial_angles = self.get_joint_angles();
+        let limits = self.robot
+            .iter_for_joints_link()
+            .map(|link| link.joint.limits.clone())
+            .collect();
+        let step_length = self.step_length;
+        let max_try = self.max_try;
+        if !self.is_feasible(&initial_angles, target_shape, target_pose) ||
+           !self.is_feasible(&goal_angles, target_shape, target_pose) {
+            return Err("Initial or Goal is colliding".to_owned());
+        }
+        rrt::dual_rrt_connect(&initial_angles,
+                              goal_angles,
+                              |angles: &[f64]| self.is_feasible(angles, target_shape, target_pose),
+                              || generate_random_joint_angles_from_limits(&limits),
+                              step_length,
+                              max_try)
     }
 }
 
