@@ -18,7 +18,7 @@
     <collision>
       <origin xyz="0 0 0" rpy="0 0 0"/>
       <geometry>
-        <cylinder radius="1" length="0.5"/>
+        <box size="0.2 0.2 0.4" />
       </geometry>
     </collision>
   </link>
@@ -37,7 +37,7 @@
     <collision>
       <origin xyz="0 0 0" rpy="0 0 0"/>
       <geometry>
-        <cylinder radius="1" length="0.5"/>
+        <box size="0.1 0.1 0.1" />
       </geometry>
     </collision>
   </link>
@@ -51,6 +51,12 @@
         <color rgba="1.0 1.0 0.0 1.0"/>
       </material>
     </visual>
+    <collision>
+      <origin xyz="0 0 0" rpy="0 0 0"/>
+      <geometry>
+        <box size="0.1 0.1 0.1" />
+      </geometry>
+    </collision>
   </link>
   <link name="l_shoulder3">
     <visual>
@@ -62,6 +68,12 @@
         <color rgba="0.5 0.5 0.2 1.0"/>
       </material>
     </visual>
+    <collision>
+      <origin xyz="0 0 0" rpy="0 0 0"/>
+      <geometry>
+        <box size="0.1 0.1 0.2" />
+      </geometry>
+    </collision>
   </link>
   <link name="l_elbow1">
     <visual>
@@ -73,6 +85,12 @@
         <color rgba="0.8 0.2 0.2 1.0"/>
       </material>
     </visual>
+    <collision>
+      <origin xyz="0 0 0" rpy="0 0 0"/>
+      <geometry>
+        <box size="0.1 0.1 0.2" />
+      </geometry>
+    </collision>
   </link>
   <link name="l_wrist1">
     <visual>
@@ -84,6 +102,12 @@
         <color rgba="1.0 0.0 0.0 1.0"/>
       </material>
     </visual>
+    <collision>
+      <origin xyz="0 0 0" rpy="0 0 0"/>
+      <geometry>
+        <box size="0.1 0.15 0.1" />
+      </geometry>
+    </collision>
   </link>
   <link name="l_wrist2">
     <visual>
@@ -95,6 +119,12 @@
         <color rgba="0.0 0.0 1.0 1.0"/>
       </material>
     </visual>
+    <collision>
+      <origin xyz="0 0 0" rpy="0 0 0"/>
+      <geometry>
+        <box size="0.05 0.08 0.15" />
+      </geometry>
+    </collision>
   </link>
 
   <!-- right arm -->
@@ -108,6 +138,12 @@
         <color rgba="0 1.0 1.0 1.0"/>
       </material>
     </visual>
+    <collision>
+      <origin xyz="0 0 0" rpy="0 0 0"/>
+      <geometry>
+        <box size="0.1 0.1 0.1" />
+      </geometry>
+    </collision>
   </link>
   <link name="r_shoulder2">
     <visual>
@@ -119,6 +155,12 @@
         <color rgba="1.0 1.0 0.0 1.0"/>
       </material>
     </visual>
+    <collision>
+      <origin xyz="0 0 0" rpy="0 0 0"/>
+      <geometry>
+        <box size="0.1 0.1 0.1" />
+      </geometry>
+    </collision>
   </link>
   <link name="r_shoulder3">
     <visual>
@@ -130,6 +172,12 @@
         <color rgba="0.5 0.5 0.2 1.0"/>
       </material>
     </visual>
+    <collision>
+      <origin xyz="0 0 0" rpy="0 0 0"/>
+      <geometry>
+        <box size="0.1 0.1 0.2" />
+      </geometry>
+    </collision>
   </link>
   <link name="r_elbow1">
     <visual>
@@ -141,6 +189,12 @@
         <color rgba="0.8 0.2 0.2 1.0"/>
       </material>
     </visual>
+    <collision>
+      <origin xyz="0 0 0" rpy="0 0 0"/>
+      <geometry>
+        <box size="0.1 0.1 0.2" />
+      </geometry>
+    </collision>
   </link>
   <link name="r_wrist1">
     <visual>
@@ -152,6 +206,12 @@
         <color rgba="1.0 0.0 0.0 1.0"/>
       </material>
     </visual>
+    <collision>
+      <origin xyz="0 0 0" rpy="0 0 0"/>
+      <geometry>
+        <box size="0.1 0.15 0.1" />
+      </geometry>
+    </collision>
   </link>
   <link name="r_wrist2">
     <visual>
@@ -163,6 +223,12 @@
         <color rgba="0.0 0.0 1.0 1.0"/>
       </material>
     </visual>
+    <collision>
+      <origin xyz="0 0 0" rpy="0 0 0"/>
+      <geometry>
+        <box size="0.05 0.08 0.15" />
+      </geometry>
+    </collision>
   </link>
 
 
