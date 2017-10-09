@@ -16,6 +16,7 @@ use ncollide::ncollide_geometry::query::Proximity;
 use ncollide::query;
 use ncollide::shape::{Shape, ShapeHandle, Cuboid, Ball, Cylinder, TriMesh, Compound};
 //use rrt::dual_rrt_connect;
+use std::collections::HashMap;
 use std::path::Path;
 use std::sync::Arc;
 
@@ -76,7 +77,9 @@ fn convert_assimp_scene_to_ncollide_mesh<T>(scene: assimp::Scene,
 }
 
 
-fn wrap_compound<T, S>(shape: S, origin: Isometry3<T>) -> Compound<na::Point3<T>, na::Isometry3<T>>
+pub fn wrap_compound<T, S>(shape: S,
+                           origin: Isometry3<T>)
+                           -> Compound<na::Point3<T>, na::Isometry3<T>>
     where T: Real,
           S: Shape<na::Point3<T>, na::Isometry3<T>>
 {
@@ -126,40 +129,49 @@ pub fn create_collision_model<T>(collision: &urdf_rs::Collision,
 }
 
 
-#[cfg(test)]
-mod tests {
-    use super::*;
-    use std::collections::HashMap;
-    #[test]
-    fn it_works() {
-        let urdf_robot = urdf_rs::read_file("sample.urdf").unwrap();
+pub struct CollisionChecker<T>
+    where T: Real
+{
+    name_collision_model_map: HashMap<String, Compound<na::Point3<T>, na::Isometry3<T>>>,
+    pub prediction: T,
+}
+
+impl<T> CollisionChecker<T>
+    where T: Real
+{
+    pub fn new(urdf_robot: &urdf_rs::Robot, base_dir: &Path, prediction: T) -> Self {
         let mut collisions = HashMap::new();
         for l in &urdf_robot.links {
-            if let Some(col) = create_collision_model::<f32>(&l.collision, Path::new("./")) {
+            if let Some(col) = create_collision_model(&l.collision, base_dir) {
                 collisions.insert(l.name.to_string(), col);
             }
         }
-        let target = Cuboid::new(Vector3::new(0.5, 0.5, 0.5));
-        let target_pos = Isometry3::new(Vector3::new(0.0, 0.0, -0.5), na::zero());
-        let prediction = 0.1;
-
-        let mut robot = k::urdf::create_tree::<f32>(&urdf_robot);
+        CollisionChecker {
+            name_collision_model_map: collisions,
+            prediction: prediction,
+        }
+    }
+    pub fn get_collision_link_names(&self,
+                                    robot: &k::LinkTree<T>,
+                                    target_shape: &Shape<na::Point3<T>, na::Isometry3<T>>,
+                                    target_pose: &na::Isometry3<T>)
+                                    -> Vec<String> {
+        let mut names = Vec::new();
         for (trans, link_name) in
             robot
                 .calc_link_transforms()
                 .iter()
                 .zip(robot.iter_link().map(|link| link.name.clone())) {
-            match collisions.get_mut(&link_name) {
+            match self.name_collision_model_map.get(&link_name) {
                 Some(obj) => {
+                    // TODO: only first shape is supported
                     let ctct = query::proximity(&(trans * obj.shapes()[0].0),
                                                 &*obj.shapes()[0].1,
-                                                &target_pos,
-                                                &target,
-                                                prediction);
-                    if ctct == Proximity::Disjoint {
-                        println!("free");
-                    } else {
-                        println!("collision");
+                                                target_pose,
+                                                target_shape,
+                                                self.prediction);
+                    if ctct != Proximity::Disjoint {
+                        names.push(link_name);
                     }
                 }
                 None => {
@@ -167,6 +179,24 @@ mod tests {
                 }
             }
         }
+        names
+    }
+}
 
+#[cfg(test)]
+mod tests {
+    use super::*;
+
+    #[test]
+    fn it_works() {
+        let urdf_robot = urdf_rs::read_file("sample.urdf").unwrap();
+        let checker = CollisionChecker::new(&urdf_robot, Path::new("./"), 0.05);
+
+        let target = Cuboid::new(Vector3::new(0.5, 0.5, 0.5));
+        let target_pose = Isometry3::new(Vector3::new(0.0, 0.0, -0.5), na::zero());
+
+        let robot = k::urdf::create_tree::<f32>(&urdf_robot);
+        let names = checker.get_collision_link_names(&robot, &target, &target_pose);
+        println!("{:?}", names);
     }
 }
