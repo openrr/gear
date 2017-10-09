@@ -14,9 +14,9 @@ rrt = "0.2.0"
 urdf-rs = "0.2.0"
 
 [dev-dependencies]
-urdf-viz = "0.2.0"
-kiss3d = "0.11.0"
+env_logger = "0.4.2"
 glfw = "0.15.0"
+kiss3d = "0.11.0"
 structopt = "0.1.0"
 structopt-derive = "0.1.0"
-env_logger = "0.4.2"
+urdf-viz = "0.2.0"
