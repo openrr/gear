@@ -14,18 +14,18 @@ use std::path::Path;
 //use structopt::StructOpt;
 use ncollide::shape::{Cuboid, Compound};
 
-pub fn set_random_joint_angles<T>(robot: &mut k::LinkTree<T>)
-                                  -> std::result::Result<(), k::JointError>
-    where T: na::Real + rand::Rand
+pub fn set_random_joint_angles<T>(
+    robot: &mut k::LinkTree<T>,
+) -> std::result::Result<(), k::JointError>
+where
+    T: na::Real + rand::Rand,
 {
     let angles_vec = robot
         .iter_for_joints_link()
         .map(|link| match link.joint.limits {
-                 Some(ref range) => {
-                     (range.max - range.min) * na::convert(rand::random()) + range.min
-                 }
-                 None => (rand::random::<T>() - na::convert(0.5)) * na::convert(2.0),
-             })
+            Some(ref range) => (range.max - range.min) * na::convert(rand::random()) + range.min,
+            None => (rand::random::<T>() - na::convert(0.5)) * na::convert(2.0),
+        })
         .collect::<Vec<T>>();
     robot.set_joint_angles(&angles_vec)
 }
@@ -44,16 +44,17 @@ impl<'a> CollisionAvoidApp<'a> {
         let mut viewer = urdf_viz::Viewer::new(urdf_robot);
 
         viewer.setup(base_dir, false);
-        let base_transform =
-            na::Isometry3::from_parts(na::Translation3::new(0.0, 0.0, 0.0),
-                                      na::UnitQuaternion::from_euler_angles(0.0, 1.57, 1.57));
+        let base_transform = na::Isometry3::from_parts(
+            na::Translation3::new(0.0, 0.0, 0.0),
+            na::UnitQuaternion::from_euler_angles(0.0, 1.57, 1.57),
+        );
         robot.set_root_transform(base_transform);
 
         let checker_for_planner = ugok::CollisionChecker::<f64>::new(urdf_robot, base_dir, 0.03);
         let mut robot_for_planner = k::urdf::create_tree::<f64>(urdf_robot);
         robot_for_planner.set_root_transform(na::convert(base_transform));
-        let planner = ugok::CollisionAvoidJointPathPlanner::new(robot_for_planner,
-                                                                checker_for_planner);
+        let planner =
+            ugok::CollisionAvoidJointPathPlanner::new(robot_for_planner, checker_for_planner);
 
         viewer.add_axis_cylinders("origin", 1.0);
         if let Some(obj) = viewer.scenes.get_mut("origin") {
@@ -68,12 +69,12 @@ impl<'a> CollisionAvoidApp<'a> {
         let target_shape = Cuboid::new(na::Vector3::new(0.20, 0.3, 0.1));
         let base64_pose: na::Isometry3<f64> = na::convert(base_transform);
         let target_pose = base64_pose *
-                          na::Isometry3::new(na::Vector3::new(0.5, 0.5, 0.0), na::zero());
-        let mut cube = viewer
-            .window
-            .add_cube(target_shape.half_extents()[0] as f32 * 2.0,
-                      target_shape.half_extents()[1] as f32 * 2.0,
-                      target_shape.half_extents()[2] as f32 * 2.0);
+            na::Isometry3::new(na::Vector3::new(0.5, 0.5, 0.0), na::zero());
+        let mut cube = viewer.window.add_cube(
+            target_shape.half_extents()[0] as f32 * 2.0,
+            target_shape.half_extents()[1] as f32 * 2.0,
+            target_shape.half_extents()[2] as f32 * 2.0,
+        );
         cube.set_local_transformation(na::convert(target_pose));
         cube.set_color(0.5, 0.0, 0.5);
         viewer.add_axis_cylinders("axis", 0.5);
@@ -95,12 +96,7 @@ impl<'a> CollisionAvoidApp<'a> {
         let mut plans: Vec<Vec<f64>> = Vec::new();
         while self.viewer.render() {
             if !plans.is_empty() {
-                let vec: Vec<f32> = plans
-                    .pop()
-                    .unwrap()
-                    .into_iter()
-                    .map(|x| x as f32)
-                    .collect();
+                let vec: Vec<f32> = plans.pop().unwrap().into_iter().map(|x| x as f32).collect();
                 self.robot.set_joint_angles(&vec).unwrap();
                 self.update_robot();
             }

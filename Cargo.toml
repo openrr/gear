@@ -3,15 +3,19 @@ name = "ugok"
 version = "0.1.0"
 authors = ["Takashi Ogura <t.ogura@gmail.com>"]
 
+[features]
+default = ["assimp"]
+
 [dependencies]
-assimp = "0.2.0"
 k = "0.0.8"
 log = "0.3.8"
 nalgebra = "0.13.0"
 ncollide = "0.13.0"
 rand = "0.3.0"
 rrt = "0.2.0"
-urdf-rs = "0.2.0"
+urdf-rs = "0.2.1"
+
+assimp = { version = "0.3.0", optional = true }
 
 [dev-dependencies]
 env_logger = "0.4.2"
@@ -19,4 +23,8 @@ glfw = "0.15.0"
 kiss3d = "0.11.0"
 structopt = "0.1.0"
 structopt-derive = "0.1.0"
-urdf-viz = "0.2.0"
+urdf-viz = {path = "../urdf-viz", version = "0.2.0", default-features = false}
+
+#[dependencies.urdf-viz]
+#default-features = false
+
