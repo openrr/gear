@@ -243,10 +243,11 @@ where
 }
 
 pub struct CollisionAvoidJointPathPlanner {
-    robot: k::LinkTree<f64>,
+    pub robot: k::LinkTree<f64>,
     pub collision_checker: CollisionChecker<f64>,
     pub step_length: f64,
     pub max_try: usize,
+    pub num_smoothing: usize,
 }
 
 impl CollisionAvoidJointPathPlanner {
@@ -255,9 +256,11 @@ impl CollisionAvoidJointPathPlanner {
             robot: robot,
             collision_checker: collision_checker,
             step_length: 0.05,
-            max_try: 1000,
+            max_try: 2000,
+            num_smoothing: 100,
         }
     }
+
     pub fn is_feasible(
         &mut self,
         joint_angles: &[f64],
@@ -268,15 +271,18 @@ impl CollisionAvoidJointPathPlanner {
         self.get_colliding_link_names(target_shape, target_pose)
             .is_empty()
     }
+
     pub fn set_joint_angles(
         &mut self,
         joint_angles: &[f64],
     ) -> std::result::Result<(), k::JointError> {
         self.robot.set_joint_angles(joint_angles)
     }
+
     pub fn get_joint_angles(&self) -> Vec<f64> {
         self.robot.get_joint_angles()
     }
+
     pub fn get_colliding_link_names(
         &self,
         target_shape: &Shape<na::Point3<f64>, na::Isometry3<f64>>,
@@ -288,6 +294,7 @@ impl CollisionAvoidJointPathPlanner {
             target_pose,
         )
     }
+
     pub fn plan(
         &mut self,
         goal_angles: &[f64],
@@ -306,14 +313,24 @@ impl CollisionAvoidJointPathPlanner {
         {
             return Err("Initial or Goal is colliding".to_owned());
         }
-        rrt::dual_rrt_connect(
+        let mut path = try!(rrt::dual_rrt_connect(
             &initial_angles,
             goal_angles,
-            |angles: &[f64]| self.is_feasible(angles, target_shape, target_pose),
+            |angles: &[f64]| {
+                self.is_feasible(angles, target_shape, target_pose)
+            },
             || generate_random_joint_angles_from_limits(&limits),
             step_length,
             max_try,
-        )
+        ));
+        let num_smoothing = self.num_smoothing;
+        rrt::smooth_path(
+            &mut path,
+            |angles: &[f64]| self.is_feasible(angles, target_shape, target_pose),
+            step_length,
+            num_smoothing,
+        );
+        Ok(path)
     }
 }
 
