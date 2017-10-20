@@ -3,15 +3,15 @@ extern crate glfw;
 extern crate k;
 extern crate nalgebra as na;
 extern crate ncollide;
+extern crate rand;
 extern crate structopt;
+extern crate ugok;
 extern crate urdf_rs;
 extern crate urdf_viz;
-extern crate rand;
-extern crate ugok;
 
-use glfw::{Action, WindowEvent, Key};
+use glfw::{Action, Key, WindowEvent};
 use std::path::Path;
-use ncollide::shape::{Cuboid, Compound};
+use ncollide::shape::{Compound, Cuboid};
 use k::JointContainer;
 
 
@@ -89,6 +89,13 @@ impl<'a> CollisionAvoidApp<'a> {
     fn update_robot(&mut self) {
         self.viewer.update(&self.robot);
     }
+    fn update_ik_target(&mut self) {
+        if let Some(obj) = self.viewer.scenes.get_mut("ik_target") {
+            obj.0.set_local_transformation(
+                na::convert(self.ik_target_pose),
+            );
+        }
+    }
     fn run(&mut self) {
         let mut plans: Vec<Vec<f64>> = Vec::new();
         let solver = k::JacobianIKSolverBuilder::<f32>::new()
@@ -112,51 +119,27 @@ impl<'a> CollisionAvoidApp<'a> {
                         match code {
                             Key::Up => {
                                 self.ik_target_pose.translation.vector[1] += 0.05;
-                                if let Some(obj) = self.viewer.scenes.get_mut("ik_target") {
-                                    obj.0.set_local_transformation(
-                                        na::convert(self.ik_target_pose),
-                                    );
-                                }
+                                update_ik_target();
                             }
                             Key::Down => {
                                 self.ik_target_pose.translation.vector[1] -= 0.05;
-                                if let Some(obj) = self.viewer.scenes.get_mut("ik_target") {
-                                    obj.0.set_local_transformation(
-                                        na::convert(self.ik_target_pose),
-                                    );
-                                }
+                                update_ik_target();
                             }
                             Key::Left => {
                                 self.ik_target_pose.translation.vector[0] -= 0.05;
-                                if let Some(obj) = self.viewer.scenes.get_mut("ik_target") {
-                                    obj.0.set_local_transformation(
-                                        na::convert(self.ik_target_pose),
-                                    );
-                                }
+                                update_ik_target();
                             }
                             Key::Right => {
                                 self.ik_target_pose.translation.vector[0] += 0.05;
-                                if let Some(obj) = self.viewer.scenes.get_mut("ik_target") {
-                                    obj.0.set_local_transformation(
-                                        na::convert(self.ik_target_pose),
-                                    );
-                                }
+                                update_ik_target();
                             }
                             Key::A => {
                                 self.ik_target_pose.translation.vector[2] += 0.05;
-                                if let Some(obj) = self.viewer.scenes.get_mut("ik_target") {
-                                    obj.0.set_local_transformation(
-                                        na::convert(self.ik_target_pose),
-                                    );
-                                }
+                                update_ik_target();
                             }
                             Key::B => {
                                 self.ik_target_pose.translation.vector[2] -= 0.05;
-                                if let Some(obj) = self.viewer.scenes.get_mut("ik_target") {
-                                    obj.0.set_local_transformation(
-                                        na::convert(self.ik_target_pose),
-                                    );
-                                }
+                                update_ik_target();
                             }
                             Key::I => {
                                 let result = ugok::solve_ik_with_random_initialize(
@@ -199,12 +182,8 @@ impl<'a> CollisionAvoidApp<'a> {
                                 }
                             }
                             Key::R => {
-                                // ugok::set_random_joint_angles(&mut arms[0]).unwrap_or(());
                                 ugok::set_random_joint_angles(&mut self.robot).unwrap_or(());
                                 self.update_robot();
-                                for name in &self.link_names {
-                                    self.viewer.reset_temporal_color(name);
-                                }
                             }
                             Key::C => {
                                 let angles: Vec<f64> = self.robot
