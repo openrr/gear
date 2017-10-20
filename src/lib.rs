@@ -19,6 +19,7 @@ use ncollide::query;
 use ncollide::shape::{Shape, ShapeHandle, Cuboid, Ball, Cylinder, TriMesh, Compound};
 use std::collections::HashMap;
 use std::path::Path;
+use k::JointContainer;
 
 fn from_urdf_pose<T>(pose: &urdf_rs::Pose) -> Isometry3<T>
 where
@@ -302,10 +303,7 @@ impl CollisionAvoidJointPathPlanner {
         target_pose: &na::Isometry3<f64>,
     ) -> std::result::Result<Vec<Vec<f64>>, String> {
         let initial_angles = self.get_joint_angles();
-        let limits = self.robot
-            .iter_for_joints_link()
-            .map(|link| link.joint.limits.clone())
-            .collect();
+        let limits = self.robot.get_joint_limits();
         let step_length = self.step_length;
         let max_try = self.max_try;
         if !self.is_feasible(&initial_angles, target_shape, target_pose) ||
@@ -332,6 +330,77 @@ impl CollisionAvoidJointPathPlanner {
         );
         Ok(path)
     }
+}
+
+fn distance<T>(a: &[T], b: &[T]) -> T
+where
+    T: Real,
+{
+    debug_assert!(a.len() == b.len());
+    a.iter()
+        .zip(b.iter())
+        .map(|(x, y)| (*x - *y) * (*x - *y))
+        .fold(T::from_f64(0.0).unwrap(), ::std::ops::Add::add)
+        .sqrt()
+}
+
+pub fn interpolate<T>(vec1: &[T], vec2: &[T], unit_length: T) -> Vec<Vec<T>>
+where
+    T: Real,
+{
+    //    let dist = distance(vec1, vec2);
+    let mut ret: Vec<Vec<T>> = vec![];
+    let dist = distance(vec1, vec2);
+    let num: usize = (dist / unit_length).to_subset().unwrap() as usize;
+    for i in 0..num {
+        ret.push(
+            vec1.iter()
+                .zip(vec2.iter())
+                .map(|(v1, v2)| {
+                    *v1 + (*v2 - *v1) * T::from_f64((i as f64) / (num as f64)).unwrap()
+                })
+                .collect::<Vec<T>>(),
+        );
+    }
+    ret
+}
+
+pub fn set_random_joint_angles<T, K>(robot: &mut K) -> std::result::Result<(), k::JointError>
+where
+    K: k::JointContainer<T>,
+    T: na::Real + rand::Rand,
+{
+    let angles_vec = robot
+        .get_joint_limits()
+        .iter()
+        .map(|limit| match *limit {
+            Some(ref range) => (range.max - range.min) * na::convert(rand::random()) + range.min,
+            None => (rand::random::<T>() - na::convert(0.5)) * na::convert(2.0),
+        })
+        .collect::<Vec<T>>();
+    robot.set_joint_angles(&angles_vec)
+}
+
+pub fn solve_ik_with_random_initialize<I, K, T>(
+    solver: &I,
+    arm: &mut K,
+    target: &na::Isometry3<T>,
+    num_max_try: usize,
+) -> std::result::Result<T, k::IKError>
+where
+    I: k::InverseKinematicsSolver<T>,
+    K: k::KinematicChain<T> + k::JointContainer<T>,
+    T: Real + rand::Rand,
+{
+    let mut result = Err(k::IKError::NotConverged);
+    for _ in 0..num_max_try {
+        set_random_joint_angles(arm).unwrap();
+        result = solver.solve(arm, &target);
+        if result.is_ok() {
+            return result;
+        }
+    }
+    result
 }
 
 #[cfg(test)]

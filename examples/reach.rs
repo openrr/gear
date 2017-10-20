@@ -12,47 +12,8 @@ extern crate ugok;
 use glfw::{Action, WindowEvent, Key};
 use std::path::Path;
 use ncollide::shape::{Cuboid, Compound};
-use k::InverseKinematicsSolver;
-use k::KinematicChain;
-/*
-fn distance(a: &[f64], b: &[f64]) -> f64 {
-    debug_assert!(a.len() == b.len());
-    a.iter()
-        .zip(b.iter())
-        .map(|(x, y)| (x - y) * (x - y))
-        .fold(0f64, ::std::ops::Add::add)
-        .sqrt()
-}*/
+use k::JointContainer;
 
-fn interpolate(vec1: &[f64], vec2: &[f64], num: usize) -> Vec<Vec<f64>> {
-    //    let dist = distance(vec1, vec2);
-    let mut ret: Vec<Vec<f64>> = vec![];
-    for i in 0..num {
-        ret.push(
-            vec1.iter()
-                .zip(vec2.iter())
-                .map(|(v1, v2)| v1 + (v2 - v1) * i as f64 / num as f64)
-                .collect::<Vec<f64>>(),
-        );
-    }
-    ret
-}
-
-pub fn set_random_joint_angles<T>(
-    robot: &mut k::LinkTree<T>,
-) -> std::result::Result<(), k::JointError>
-where
-    T: na::Real + rand::Rand,
-{
-    let angles_vec = robot
-        .iter_for_joints_link()
-        .map(|link| match link.joint.limits {
-            Some(ref range) => (range.max - range.min) * na::convert(rand::random()) + range.min,
-            None => (rand::random::<T>() - na::convert(0.5)) * na::convert(2.0),
-        })
-        .collect::<Vec<T>>();
-    robot.set_joint_angles(&angles_vec)
-}
 
 struct CollisionAvoidApp<'a> {
     robot: k::LinkTree<f32>,
@@ -198,36 +159,17 @@ impl<'a> CollisionAvoidApp<'a> {
                                 }
                             }
                             Key::I => {
-                                let mut target = arms[0].calc_end_transform();
-                                target.translation.vector[0] += 0.05;
-                                println!("{}", target);
-                                solver
-//                                    .solve(&mut arms[0], &na::convert(self.ik_target_pose))
-                                    .solve(&mut arms[0], &target)
-                                    .unwrap_or_else(|err| {
-                                        println!("Err: {}", err);
-                                        0.0f32
-                                    });
-                                self.update_robot();
-                            }
-                            Key::J => {
-                                for _ in 0..100 {
-                                    set_random_joint_angles(&mut self.robot).unwrap_or(());
-                                    let result = solver.solve(
-                                        &mut arms[0],
-                                        &na::convert(self.ik_target_pose),
-                                    );
-                                    match result {
-                                        Ok(_) => {
-                                            break;
-                                        }
-                                        Err(err) => {
-                                            println!("Err: {}", err);
-                                        }
-                                    };
+                                let result = ugok::solve_ik_with_random_initialize(
+                                    &solver,
+                                    &mut arms[0],
+                                    &na::convert(self.ik_target_pose),
+                                    100,
+                                );
+                                if result.is_ok() {
+                                    self.update_robot();
+                                } else {
+                                    println!("fail!!");
                                 }
-                                self.update_robot();
-
                             }
 
                             Key::P => {
@@ -246,7 +188,7 @@ impl<'a> CollisionAvoidApp<'a> {
                                         plan.reverse();
                                         for i in 0..(plan.len() - 1) {
                                             let mut interpolated_angles =
-                                                interpolate(&plan[i], &plan[i + 1], 20);
+                                                ugok::interpolate(&plan[i], &plan[i + 1], 0.1);
                                             plans.append(&mut interpolated_angles);
                                         }
                                         //plans.push(plan.last().unwrap());
@@ -257,7 +199,8 @@ impl<'a> CollisionAvoidApp<'a> {
                                 }
                             }
                             Key::R => {
-                                set_random_joint_angles(&mut self.robot).unwrap_or(());
+                                // ugok::set_random_joint_angles(&mut arms[0]).unwrap_or(());
+                                ugok::set_random_joint_angles(&mut self.robot).unwrap_or(());
                                 self.update_robot();
                                 for name in &self.link_names {
                                     self.viewer.reset_temporal_color(name);
