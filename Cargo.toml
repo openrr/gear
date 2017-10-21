@@ -4,15 +4,16 @@ version = "0.1.0"
 authors = ["Takashi Ogura <t.ogura@gmail.com>"]
 
 [features]
-default = ["assimp"]
+default = ["use-assimp"]
+use-assimp = ["urdf-viz/assimp", "assimp"]
 
 [dependencies]
-k = { version = "0.0.8", path = "../k" }
+k = "0.1.0"
 log = "0.3.8"
 nalgebra = "0.13.0"
 ncollide = "0.13.0"
 rand = "0.3.0"
-rrt = { version = "0.2.0", path = "../rrt" }
+rrt = "0.3.0"
 urdf-rs = "0.2.1"
 
 assimp = { version = "0.3.0", optional = true }
@@ -23,10 +24,4 @@ glfw = "0.15.0"
 kiss3d = "0.11.0"
 structopt = "0.1.0"
 structopt-derive = "0.1.0"
-urdf-viz = {path = "../urdf-viz", version = "0.2.0", default-features = false}
-
-[patch.crates-io]
-k = {path = "../k"}
-
-#[dependencies.urdf-viz]
-#default-features = false
+urdf-viz = { version = "0.2.2", default-features = false}
