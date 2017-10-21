@@ -2,21 +2,21 @@
 extern crate assimp;
 
 extern crate k;
+#[macro_use]
+extern crate log;
 extern crate nalgebra as na;
 extern crate ncollide;
 extern crate rand;
 extern crate rrt;
 extern crate urdf_rs;
-#[macro_use]
-extern crate log;
 
 mod errors;
 pub use errors::*;
 
-use na::{Isometry3, Vector3, Real, Translation3, UnitQuaternion};
+use na::{Isometry3, Real, Translation3, UnitQuaternion, Vector3};
 use ncollide::ncollide_geometry::query::Proximity;
 use ncollide::query;
-use ncollide::shape::{Shape, ShapeHandle, Cuboid, Ball, Cylinder, TriMesh, Compound};
+use ncollide::shape::{Ball, Compound, Cuboid, Cylinder, Shape, ShapeHandle, TriMesh};
 use std::collections::HashMap;
 use std::path::Path;
 use k::JointContainer;
@@ -37,7 +37,6 @@ where
             na::convert(pose.rpy[2]),
         ),
     )
-
 }
 
 #[cfg(assimp)]
@@ -137,15 +136,13 @@ where
             ));
             Some(wrap_compound(cube, pose))
         }
-        urdf_rs::Geometry::Cylinder { radius, length } => {
-            Some(wrap_compound(
-                Cylinder::new(
-                    na::convert(length * 0.5),
-                    na::convert(radius),
-                ),
-                pose,
-            ))
-        }
+        urdf_rs::Geometry::Cylinder { radius, length } => Some(wrap_compound(
+            Cylinder::new(
+                na::convert(length * 0.5),
+                na::convert(radius),
+            ),
+            pose,
+        )),
         urdf_rs::Geometry::Sphere { radius } => {
             Some(wrap_compound(Ball::new(na::convert(radius)), pose))
         }

@@ -18,7 +18,6 @@ use k::JointContainer;
 struct CollisionAvoidApp<'a> {
     robot: k::LinkTree<f32>,
     viewer: urdf_viz::Viewer<'a>,
-    link_names: Vec<String>,
     target_objects: Compound<na::Point3<f64>, na::Isometry3<f64>>,
     ik_target_pose: na::Isometry3<f64>,
     planner: ugok::CollisionAvoidJointPathPlanner,
@@ -76,7 +75,6 @@ impl<'a> CollisionAvoidApp<'a> {
 
         CollisionAvoidApp {
             viewer: viewer,
-            link_names: link_names,
             robot: robot,
             target_objects: ugok::wrap_compound(target_shape, target_pose),
             planner: planner,
@@ -105,7 +103,6 @@ impl<'a> CollisionAvoidApp<'a> {
             .jacobian_move_epsilon(0.001)
             .finalize();
         let mut arms = k::create_kinematic_chains_with_dof_limit(&self.robot, 6);
-        println!("{} {:?}", arms.len(), arms[0].get_joint_angles());
         while self.viewer.render() {
             if !plans.is_empty() {
                 let vec: Vec<f32> = plans.pop().unwrap().into_iter().map(|x| x as f32).collect();
@@ -119,27 +116,27 @@ impl<'a> CollisionAvoidApp<'a> {
                         match code {
                             Key::Up => {
                                 self.ik_target_pose.translation.vector[1] += 0.05;
-                                update_ik_target();
+                                self.update_ik_target();
                             }
                             Key::Down => {
                                 self.ik_target_pose.translation.vector[1] -= 0.05;
-                                update_ik_target();
+                                self.update_ik_target();
                             }
                             Key::Left => {
                                 self.ik_target_pose.translation.vector[0] -= 0.05;
-                                update_ik_target();
+                                self.update_ik_target();
                             }
                             Key::Right => {
                                 self.ik_target_pose.translation.vector[0] += 0.05;
-                                update_ik_target();
+                                self.update_ik_target();
                             }
-                            Key::A => {
+                            Key::F => {
                                 self.ik_target_pose.translation.vector[2] += 0.05;
-                                update_ik_target();
+                                self.update_ik_target();
                             }
                             Key::B => {
                                 self.ik_target_pose.translation.vector[2] -= 0.05;
-                                update_ik_target();
+                                self.update_ik_target();
                             }
                             Key::I => {
                                 let result = ugok::solve_ik_with_random_initialize(

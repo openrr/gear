@@ -7,8 +7,12 @@ $ cargo run --release --example reach
 
 then,
 
+
+* type `i` to reach the target
+* type `p` to plan
+
 * type `r` to set random pose
 * type `c` to check collision
-* type `p` to plan
+
 
 [Video](https://www.youtube.com/watch?v=33VHdUCBTA8)
