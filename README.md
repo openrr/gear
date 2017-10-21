@@ -7,7 +7,8 @@ $ cargo run --release --example reach
 
 then,
 
-
+* Up/Down/Left/Right/`f`/`b` to move IK target
+* type `m` to use current pose as init pose
 * type `i` to reach the target
 * type `p` to plan
 
