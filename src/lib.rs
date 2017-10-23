@@ -19,7 +19,6 @@ use ncollide::query;
 use ncollide::shape::{Ball, Compound, Cuboid, Cylinder, Shape, ShapeHandle, TriMesh};
 use std::collections::HashMap;
 use std::path::Path;
-use k::JointContainer;
 
 fn from_urdf_pose<T>(pose: &urdf_rs::Pose) -> Isometry3<T>
 where
@@ -167,7 +166,7 @@ where
 
 
 pub struct CollisionChecker<T>
-where
+    where
     T: Real,
 {
     name_collision_model_map: HashMap<String, Compound<na::Point3<T>, na::Isometry3<T>>>,
@@ -190,19 +189,17 @@ where
             prediction: prediction,
         }
     }
-    pub fn get_colliding_link_names(
+    pub fn get_colliding_link_names<R>(
         &self,
-        robot: &k::LinkTree<T>,
+        robot: &R,
         target_shape: &Shape<na::Point3<T>, na::Isometry3<T>>,
         target_pose: &na::Isometry3<T>,
-    ) -> Vec<String> {
+    ) -> Vec<String>
+where R: k::LinkContainer<T> + k::JointContainer<T>,
+    {
         let mut names = Vec::new();
         for (trans, link_name) in
-            robot.calc_link_transforms().iter().zip(
-                robot.iter_link().map(
-                    |link| link.name.clone(),
-                ),
-            )
+            robot.calc_link_transforms().iter().zip(robot.get_link_names())
         {
             match self.name_collision_model_map.get(&link_name) {
                 Some(obj) => {
@@ -240,16 +237,20 @@ where
         .collect()
 }
 
-pub struct CollisionAvoidJointPathPlanner {
-    pub robot: k::LinkTree<f64>,
+pub struct CollisionAvoidJointPathPlanner<K>
+    where K: k::JointContainer<f64>
+{
+    pub robot: K,
     pub collision_checker: CollisionChecker<f64>,
     pub step_length: f64,
     pub max_try: usize,
     pub num_smoothing: usize,
 }
 
-impl CollisionAvoidJointPathPlanner {
-    pub fn new(robot: k::LinkTree<f64>, collision_checker: CollisionChecker<f64>) -> Self {
+impl<K> CollisionAvoidJointPathPlanner<K>
+    where K: k::JointContainer<f64> + k::LinkContainer<f64>
+{
+    pub fn new(robot: K, collision_checker: CollisionChecker<f64>) -> Self {
         CollisionAvoidJointPathPlanner {
             robot: robot,
             collision_checker: collision_checker,

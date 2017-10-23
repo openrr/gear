@@ -20,7 +20,8 @@ struct CollisionAvoidApp<'a> {
     viewer: urdf_viz::Viewer<'a>,
     target_objects: Compound<na::Point3<f64>, na::Isometry3<f64>>,
     ik_target_pose: na::Isometry3<f64>,
-    planner: ugok::CollisionAvoidJointPathPlanner,
+    robot_for_planner: k::LinkTree<f64>,
+    planner: ugok::CollisionAvoidJointPathPlanner<k::RefKinematicChain<f64>>,
 }
 
 impl<'a> CollisionAvoidApp<'a> {
@@ -38,8 +39,9 @@ impl<'a> CollisionAvoidApp<'a> {
         let checker_for_planner = ugok::CollisionChecker::<f64>::new(urdf_robot, base_dir, 0.03);
         let mut robot_for_planner = k::urdf::create_tree::<f64>(urdf_robot);
         robot_for_planner.set_root_transform(na::convert(base_transform));
+        let mut arms = k::create_kinematic_chains_with_dof_limit(&robot_for_planner, 6);
         let planner =
-            ugok::CollisionAvoidJointPathPlanner::new(robot_for_planner, checker_for_planner);
+            ugok::CollisionAvoidJointPathPlanner::new(arms.pop().expect("no arm"), checker_for_planner);
 
         viewer.add_axis_cylinders("origin", 1.0);
         if let Some(obj) = viewer.scenes.get_mut("origin") {
@@ -72,10 +74,10 @@ impl<'a> CollisionAvoidApp<'a> {
         if let Some(obj) = viewer.scenes.get_mut("ik_target") {
             obj.0.set_local_transformation(na::convert(ik_target_pose));
         }
-
         CollisionAvoidApp {
             viewer: viewer,
             robot: robot,
+            robot_for_planner: robot_for_planner,
             target_objects: ugok::wrap_compound(target_shape, target_pose),
             planner: planner,
             ik_target_pose: ik_target_pose,
@@ -85,6 +87,12 @@ impl<'a> CollisionAvoidApp<'a> {
         self.update_robot();
     }
     fn update_robot(&mut self) {
+        let current: Vec<f32> = self.robot_for_planner
+            .get_joint_angles()
+            .into_iter()
+            .map(|x| x as f32)
+            .collect();
+        self.robot.set_joint_angles(&current).unwrap();
         self.viewer.update(&self.robot);
     }
     fn update_ik_target(&mut self) {
@@ -100,25 +108,25 @@ impl<'a> CollisionAvoidApp<'a> {
             .into_iter()
             .map(|x| x as f64)
             .collect();
-        self.planner.set_joint_angles(&current)
+        self.robot_for_planner.set_joint_angles(&current)
     }
     fn run(&mut self) {
         let mut plans: Vec<Vec<f64>> = Vec::new();
-        let solver = k::JacobianIKSolverBuilder::<f32>::new()
+        let solver = k::JacobianIKSolverBuilder::<f64>::new()
             .num_max_try(1000)
             .allowable_target_distance(0.01)
             .move_epsilon(0.00001)
             .jacobian_move_epsilon(0.001)
             .finalize();
         let mut initial = Vec::<f64>::new();
-        let mut arms = k::create_kinematic_chains_with_dof_limit(&self.robot, 6);
-        initial.resize(arms[0].get_joint_angles().len(), 0.0);
+        initial.resize(self.planner.robot.get_joint_angles().len(), 0.0);
+        //println!("len = {}", self.robot.get_joint_angles().len());
         self.planner.set_joint_angles(&initial).unwrap();
 
         while self.viewer.render() {
             if !plans.is_empty() {
-                let vec: Vec<f32> = plans.pop().unwrap().into_iter().map(|x| x as f32).collect();
-                self.robot.set_joint_angles(&vec).unwrap();
+                //let vec: Vec<f32> = plans.pop().unwrap().into_iter().map(|x| x as f32).collect();
+                self.planner.set_joint_angles(&plans.pop().unwrap()).unwrap();
                 self.update_robot();
             }
 
@@ -153,7 +161,7 @@ impl<'a> CollisionAvoidApp<'a> {
                             Key::I => {
                                 let result = ugok::solve_ik_with_random_initialize(
                                     &solver,
-                                    &mut arms[0],
+                                    &mut self.planner.robot,
                                     &na::convert(self.ik_target_pose),
                                     100,
                                 );
@@ -164,15 +172,19 @@ impl<'a> CollisionAvoidApp<'a> {
                                 }
                             }
                             Key::M => {
-                                self.set_current_robot_to_planner().unwrap();
+                                initial = self.planner.robot.get_joint_angles();
                             }
                             Key::P => {
+                                /*
                                 let goal: Vec<f64> = self.robot
                                     .get_joint_angles()
                                     .into_iter()
                                     .map(|x| x as f64)
                                     .collect();
+                                 */
+                                let goal = self.planner.robot.get_joint_angles();
                                 let obj = &self.target_objects.shapes()[0];
+                                self.planner.set_joint_angles(&initial).unwrap();
                                 let result = self.planner.plan(&goal, &*obj.1, &obj.0);
                                 match result {
                                     Ok(mut plan) => {
@@ -189,7 +201,8 @@ impl<'a> CollisionAvoidApp<'a> {
                                 }
                             }
                             Key::R => {
-                                ugok::set_random_joint_angles(&mut self.robot).unwrap();
+                                ugok::set_random_joint_angles(&mut self.planner.robot).unwrap();
+//                                self.set_current_robot_to_planner(().unwrap();
                                 self.update_robot();
                             }
                             Key::C => {
