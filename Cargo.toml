@@ -25,3 +25,6 @@ kiss3d = "0.11.0"
 structopt = "0.1.0"
 structopt-derive = "0.1.0"
 urdf-viz = { version = "0.3.0", default-features = false}
+
+[patch.crates-io]
+assimp-sys = { path = "../assimp-sys" }

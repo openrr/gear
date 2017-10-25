@@ -11,7 +11,7 @@ extern crate urdf_viz;
 
 use glfw::{Action, Key, WindowEvent};
 use std::path::Path;
-use ncollide::shape::{Compound, Cuboid};
+use ncollide::shape::{Compound, Cuboid, ShapeHandle};
 use k::JointContainer;
 
 
@@ -39,7 +39,7 @@ impl<'a> CollisionAvoidApp<'a> {
         robot_for_planner.set_root_transform(base_transform);
         viewer.update(&robot_for_planner);
 
-        let mut arms = k::create_kinematic_chains_with_dof_limit(&robot_for_planner, 6);
+        let mut arms = k::create_kinematic_chains_with_dof_limit(&robot_for_planner, 7);
         let planner = ugok::CollisionAvoidJointPathPlanner::new(
             arms.pop().expect("no arm"),
             checker_for_planner,
@@ -50,16 +50,34 @@ impl<'a> CollisionAvoidApp<'a> {
             obj.0.set_local_transformation(na::convert(base_transform));
         }
 
-        let target_shape = Cuboid::new(na::Vector3::new(0.20, 0.3, 0.1));
-        let target_pose = base_transform *
+        let target_shape1 = Cuboid::new(na::Vector3::new(0.20, 0.3, 0.1));
+        let target_pose1 = base_transform *
             na::Isometry3::new(na::Vector3::new(0.6, 0.5, 0.0), na::zero());
         let mut cube = viewer.window.add_cube(
-            target_shape.half_extents()[0] as f32 * 2.0,
-            target_shape.half_extents()[1] as f32 * 2.0,
-            target_shape.half_extents()[2] as f32 * 2.0,
+            target_shape1.half_extents()[0] as f32 * 2.0,
+            target_shape1.half_extents()[1] as f32 * 2.0,
+            target_shape1.half_extents()[2] as f32 * 2.0,
         );
-        cube.set_local_transformation(na::convert(target_pose));
+        cube.set_local_transformation(na::convert(target_pose1));
         cube.set_color(0.5, 0.0, 0.5);
+
+        let target_shape2 = Cuboid::new(na::Vector3::new(0.20, 0.3, 0.1));
+        let target_pose2 = base_transform *
+            na::Isometry3::new(na::Vector3::new(0.6, 0.5, 1.0), na::zero());
+        let mut cube2 = viewer.window.add_cube(
+            target_shape2.half_extents()[0] as f32 * 2.0,
+            target_shape2.half_extents()[1] as f32 * 2.0,
+            target_shape2.half_extents()[2] as f32 * 2.0,
+        );
+        cube2.set_local_transformation(na::convert(target_pose2));
+        cube2.set_color(0.5, 0.5, 0.0);
+
+        let mut shapes = Vec::new();
+        let handle1 = ShapeHandle::new(target_shape1);
+        shapes.push((target_pose1, handle1));
+        let handle2 = ShapeHandle::new(target_shape2);
+        shapes.push((target_pose2, handle2));
+        let target_objects = Compound::new(shapes);
 
         let ik_target_pose = base_transform *
             na::Isometry3::from_parts(
@@ -72,7 +90,7 @@ impl<'a> CollisionAvoidApp<'a> {
         }
         CollisionAvoidApp {
             viewer: viewer,
-            target_objects: ugok::wrap_compound(target_shape, target_pose),
+            target_objects: target_objects,
             ik_target_pose: ik_target_pose,
             colliding_link_names: Vec::new(),
             planner: planner,
@@ -105,9 +123,7 @@ impl<'a> CollisionAvoidApp<'a> {
             .move_epsilon(0.00001)
             .jacobian_move_epsilon(0.001)
             .finalize();
-        let mut initial = Vec::<f64>::new();
-        initial.resize(self.planner.robot.get_joint_angles().len(), 0.0);
-        self.planner.set_joint_angles(&initial).unwrap();
+        let mut initial = self.planner.robot.get_joint_angles();
         while self.viewer.render() {
             if !plans.is_empty() {
                 self.planner
@@ -163,9 +179,8 @@ impl<'a> CollisionAvoidApp<'a> {
                             }
                             Key::P => {
                                 let goal = self.planner.robot.get_joint_angles();
-                                let obj = &self.target_objects.shapes()[0];
                                 self.planner.set_joint_angles(&initial).unwrap();
-                                let result = self.planner.plan(&goal, &*obj.1, &obj.0);
+                                let result = self.planner.plan(&goal, &self.target_objects);
                                 match result {
                                     Ok(mut plan) => {
                                         plan.reverse();
@@ -186,13 +201,11 @@ impl<'a> CollisionAvoidApp<'a> {
                                 self.update_robot();
                             }
                             Key::C => {
-                                for obj in self.target_objects.shapes() {
-                                    self.colliding_link_names =
-                                        self.planner.get_colliding_link_names(&*obj.1, &obj.0);
-                                    for name in &self.colliding_link_names {
-                                        println!("{}", name);
-                                        self.viewer.set_temporal_color(name, 0.8, 0.8, 0.6);
-                                    }
+                                self.colliding_link_names =
+                                    self.planner.get_colliding_link_names(&self.target_objects);
+                                for name in &self.colliding_link_names {
+                                    println!("{}", name);
+                                    self.viewer.set_temporal_color(name, 0.8, 0.8, 0.6);
                                 }
                                 println!("===========");
                             }
@@ -207,8 +220,10 @@ impl<'a> CollisionAvoidApp<'a> {
 }
 
 fn main() {
+    use std::env;
     env_logger::init().unwrap();
-    let input_path = Path::new("sample.urdf");
+    let input_string = env::args().nth(1).unwrap_or("sample.urdf".to_owned());
+    let input_path = Path::new(&input_string);
     let base_dir = input_path.parent().unwrap();
     let urdf_robot = urdf_rs::utils::read_urdf_or_xacro(input_path).unwrap();
     let mut app = CollisionAvoidApp::new(&urdf_robot, base_dir);
