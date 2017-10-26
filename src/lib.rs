@@ -283,13 +283,19 @@ impl<K> CollisionAvoidJointPathPlanner<K>
 where
     K: k::JointContainer<f64> + k::LinkContainer<f64>,
 {
-    pub fn new(robot: K, collision_checker: CollisionChecker<f64>) -> Self {
+    pub fn new(
+        robot: K,
+        collision_checker: CollisionChecker<f64>,
+        step_length: f64,
+        max_try: usize,
+        num_smoothing: usize,
+    ) -> Self {
         CollisionAvoidJointPathPlanner {
             robot: robot,
             collision_checker: collision_checker,
-            step_length: 0.1,
-            max_try: 5000,
-            num_smoothing: 100,
+            step_length: step_length,
+            max_try: max_try,
+            num_smoothing: num_smoothing,
         }
     }
 
@@ -357,6 +363,53 @@ where
             num_smoothing,
         );
         Ok(path)
+    }
+}
+
+pub struct CollisionAvoidJointPathPlannerBuilder<K>
+where
+    K: k::JointContainer<f64>,
+{
+    pub robot: K,
+    pub collision_checker: CollisionChecker<f64>,
+    pub step_length: f64,
+    pub max_try: usize,
+    pub num_smoothing: usize,
+}
+
+impl<K> CollisionAvoidJointPathPlannerBuilder<K>
+where
+    K: k::JointContainer<f64> + k::LinkContainer<f64>,
+{
+    pub fn new(robot: K, collision_checker: CollisionChecker<f64>) -> Self {
+        CollisionAvoidJointPathPlannerBuilder {
+            robot: robot,
+            collision_checker: collision_checker,
+            step_length: 0.1,
+            max_try: 5000,
+            num_smoothing: 100,
+        }
+    }
+    pub fn step_length(mut self, step_length: f64) -> Self {
+        self.step_length = step_length;
+        self
+    }
+    pub fn max_try(mut self, max_try: usize) -> Self {
+        self.max_try = max_try;
+        self
+    }
+    pub fn num_smoothing(mut self, num_smoothing: usize) -> Self {
+        self.num_smoothing = num_smoothing;
+        self
+    }
+    pub fn finalize(self) -> CollisionAvoidJointPathPlanner<K> {
+        CollisionAvoidJointPathPlanner::new(
+            self.robot,
+            self.collision_checker,
+            self.step_length,
+            self.max_try,
+            self.num_smoothing,
+        )
     }
 }
 

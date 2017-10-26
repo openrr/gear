@@ -40,10 +40,11 @@ impl<'a> CollisionAvoidApp<'a> {
         viewer.update(&robot_for_planner);
 
         let mut arms = k::create_kinematic_chains_with_dof_limit(&robot_for_planner, 7);
-        let planner = ugok::CollisionAvoidJointPathPlanner::new(
+        let planner = ugok::CollisionAvoidJointPathPlannerBuilder::new(
             arms.pop().expect("no arm"),
             checker_for_planner,
-        );
+        ).max_try(5000)
+            .finalize();
 
         viewer.add_axis_cylinders("origin", 1.0);
         if let Some(obj) = viewer.scenes.get_mut("origin") {
