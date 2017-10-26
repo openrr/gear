@@ -47,9 +47,10 @@ where
     let mut importer = assimp::Importer::new();
     importer.pre_transform_vertices(|x| x.enable = true);
     importer.collada_ignore_up_direction(true);
-    let file_string = filename.as_ref().to_str().ok_or(
-        "faild to get string from path",
-    )?;
+    let file_string = filename
+        .as_ref()
+        .to_str()
+        .ok_or("faild to get string from path")?;
     Ok(convert_assimp_scene_to_ncollide_mesh(
         importer.read_file(file_string)?,
         scale,
@@ -136,10 +137,7 @@ where
             Some(wrap_compound(cube, pose))
         }
         urdf_rs::Geometry::Cylinder { radius, length } => Some(wrap_compound(
-            Cylinder::new(
-                na::convert(length * 0.5),
-                na::convert(radius),
-            ),
+            Cylinder::new(na::convert(length * 0.5), na::convert(radius)),
             pose,
         )),
         urdf_rs::Geometry::Sphere { radius } => {
@@ -199,10 +197,10 @@ where
         R: k::LinkContainer<T> + k::JointContainer<T>,
     {
         let mut names = Vec::new();
-        for (trans, link_name) in
-            robot.calc_link_transforms().iter().zip(
-                robot.get_link_names(),
-            )
+        for (trans, link_name) in robot
+            .calc_link_transforms()
+            .iter()
+            .zip(robot.get_link_names())
         {
             match self.name_collision_model_map.get(&link_name) {
                 Some(obj) => {
@@ -242,17 +240,15 @@ where
             .iter()
             .zip(angles.iter())
             .map(|(range, angle)| match *range {
-                Some(ref range) => {
-                    if *angle > range.max {
-                        range.max
+                Some(ref range) => if *angle > range.max {
+                    range.max
+                } else {
+                    if *angle < range.min {
+                        range.min
                     } else {
-                        if *angle < range.min {
-                            range.min
-                        } else {
-                            *angle
-                        }
+                        *angle
                     }
-                }
+                },
                 None => *angle,
             })
             .collect(),
@@ -291,8 +287,8 @@ where
         CollisionAvoidJointPathPlanner {
             robot: robot,
             collision_checker: collision_checker,
-            step_length: 0.05,
-            max_try: 2000,
+            step_length: 0.1,
+            max_try: 5000,
             num_smoothing: 100,
         }
     }
@@ -323,11 +319,9 @@ where
     ) -> Vec<String> {
         let mut ret = Vec::new();
         for shape in objects.shapes() {
-            let mut colliding_names = self.collision_checker.get_colliding_link_names(
-                &self.robot,
-                &*shape.1,
-                &shape.0,
-            );
+            let mut colliding_names =
+                self.collision_checker
+                    .get_colliding_link_names(&self.robot, &*shape.1, &shape.0);
             ret.append(&mut colliding_names);
         }
         ret

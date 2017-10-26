@@ -34,7 +34,7 @@ impl<'a> CollisionAvoidApp<'a> {
             na::UnitQuaternion::from_euler_angles(0.0, 1.57, 1.57),
         );
 
-        let checker_for_planner = ugok::CollisionChecker::<f64>::new(urdf_robot, base_dir, 0.03);
+        let checker_for_planner = ugok::CollisionChecker::<f64>::new(urdf_robot, base_dir, 0.01);
         let mut robot_for_planner = k::urdf::create_tree::<f64>(urdf_robot);
         robot_for_planner.set_root_transform(base_transform);
         viewer.update(&robot_for_planner);
@@ -51,8 +51,8 @@ impl<'a> CollisionAvoidApp<'a> {
         }
 
         let target_shape1 = Cuboid::new(na::Vector3::new(0.20, 0.3, 0.1));
-        let target_pose1 = base_transform *
-            na::Isometry3::new(na::Vector3::new(0.6, 0.5, 0.0), na::zero());
+        let target_pose1 =
+            base_transform * na::Isometry3::new(na::Vector3::new(0.6, 0.0, 0.1), na::zero());
         let mut cube = viewer.window.add_cube(
             target_shape1.half_extents()[0] as f32 * 2.0,
             target_shape1.half_extents()[1] as f32 * 2.0,
@@ -62,8 +62,8 @@ impl<'a> CollisionAvoidApp<'a> {
         cube.set_color(0.5, 0.0, 0.5);
 
         let target_shape2 = Cuboid::new(na::Vector3::new(0.20, 0.3, 0.1));
-        let target_pose2 = base_transform *
-            na::Isometry3::new(na::Vector3::new(0.6, 0.5, 1.0), na::zero());
+        let target_pose2 =
+            base_transform * na::Isometry3::new(na::Vector3::new(0.6, 0.0, 0.6), na::zero());
         let mut cube2 = viewer.window.add_cube(
             target_shape2.half_extents()[0] as f32 * 2.0,
             target_shape2.half_extents()[1] as f32 * 2.0,
@@ -79,10 +79,10 @@ impl<'a> CollisionAvoidApp<'a> {
         shapes.push((target_pose2, handle2));
         let target_objects = Compound::new(shapes);
 
-        let ik_target_pose = base_transform *
-            na::Isometry3::from_parts(
+        let ik_target_pose = base_transform
+            * na::Isometry3::from_parts(
                 na::Translation3::new(0.60, 0.40, 0.3),
-                na::UnitQuaternion::from_euler_angles(0.0, -1.57, 0.0),
+                na::UnitQuaternion::from_euler_angles(0.0, -0.1, 0.0),
             );
         viewer.add_axis_cylinders("ik_target", 0.3);
         if let Some(obj) = viewer.scenes.get_mut("ik_target") {
@@ -105,9 +105,8 @@ impl<'a> CollisionAvoidApp<'a> {
     }
     fn update_ik_target(&mut self) {
         if let Some(obj) = self.viewer.scenes.get_mut("ik_target") {
-            obj.0.set_local_transformation(
-                na::convert(self.ik_target_pose),
-            );
+            obj.0
+                .set_local_transformation(na::convert(self.ik_target_pose));
         }
     }
     fn reset_colliding_link_colors(&mut self) {
@@ -134,84 +133,82 @@ impl<'a> CollisionAvoidApp<'a> {
 
             for event in self.viewer.events().iter() {
                 match event.value {
-                    WindowEvent::Key(code, _, Action::Press, _) => {
-                        match code {
-                            Key::Up => {
-                                self.ik_target_pose.translation.vector[1] += 0.05;
-                                self.update_ik_target();
-                            }
-                            Key::Down => {
-                                self.ik_target_pose.translation.vector[1] -= 0.05;
-                                self.update_ik_target();
-                            }
-                            Key::Left => {
-                                self.ik_target_pose.translation.vector[0] -= 0.05;
-                                self.update_ik_target();
-                            }
-                            Key::Right => {
-                                self.ik_target_pose.translation.vector[0] += 0.05;
-                                self.update_ik_target();
-                            }
-                            Key::B => {
-                                self.ik_target_pose.translation.vector[2] += 0.05;
-                                self.update_ik_target();
-                            }
-                            Key::F => {
-                                self.ik_target_pose.translation.vector[2] -= 0.05;
-                                self.update_ik_target();
-                            }
-                            Key::I => {
-                                self.reset_colliding_link_colors();
-                                let result = ugok::solve_ik_with_random_initialize(
-                                    &solver,
-                                    &mut self.planner.robot,
-                                    &self.ik_target_pose,
-                                    100,
-                                );
-                                if result.is_ok() {
-                                    self.update_robot();
-                                } else {
-                                    println!("fail!!");
-                                }
-                            }
-                            Key::M => {
-                                initial = self.planner.robot.get_joint_angles();
-                            }
-                            Key::P => {
-                                let goal = self.planner.robot.get_joint_angles();
-                                self.planner.set_joint_angles(&initial).unwrap();
-                                let result = self.planner.plan(&goal, &self.target_objects);
-                                match result {
-                                    Ok(mut plan) => {
-                                        plan.reverse();
-                                        for i in 0..(plan.len() - 1) {
-                                            let mut interpolated_angles =
-                                                ugok::interpolate(&plan[i], &plan[i + 1], 0.1);
-                                            plans.append(&mut interpolated_angles);
-                                        }
-                                    }
-                                    Err(err) => {
-                                        println!("{:?}", err);
-                                    }
-                                }
-                            }
-                            Key::R => {
-                                self.reset_colliding_link_colors();
-                                ugok::set_random_joint_angles(&mut self.planner.robot).unwrap();
-                                self.update_robot();
-                            }
-                            Key::C => {
-                                self.colliding_link_names =
-                                    self.planner.get_colliding_link_names(&self.target_objects);
-                                for name in &self.colliding_link_names {
-                                    println!("{}", name);
-                                    self.viewer.set_temporal_color(name, 0.8, 0.8, 0.6);
-                                }
-                                println!("===========");
-                            }
-                            _ => {}
+                    WindowEvent::Key(code, _, Action::Press, _) => match code {
+                        Key::Up => {
+                            self.ik_target_pose.translation.vector[1] += 0.05;
+                            self.update_ik_target();
                         }
-                    }
+                        Key::Down => {
+                            self.ik_target_pose.translation.vector[1] -= 0.05;
+                            self.update_ik_target();
+                        }
+                        Key::Left => {
+                            self.ik_target_pose.translation.vector[0] -= 0.05;
+                            self.update_ik_target();
+                        }
+                        Key::Right => {
+                            self.ik_target_pose.translation.vector[0] += 0.05;
+                            self.update_ik_target();
+                        }
+                        Key::B => {
+                            self.ik_target_pose.translation.vector[2] += 0.05;
+                            self.update_ik_target();
+                        }
+                        Key::F => {
+                            self.ik_target_pose.translation.vector[2] -= 0.05;
+                            self.update_ik_target();
+                        }
+                        Key::I => {
+                            self.reset_colliding_link_colors();
+                            let result = ugok::solve_ik_with_random_initialize(
+                                &solver,
+                                &mut self.planner.robot,
+                                &self.ik_target_pose,
+                                100,
+                            );
+                            if result.is_ok() {
+                                self.update_robot();
+                            } else {
+                                println!("fail!!");
+                            }
+                        }
+                        Key::M => {
+                            initial = self.planner.robot.get_joint_angles();
+                        }
+                        Key::P => {
+                            let goal = self.planner.robot.get_joint_angles();
+                            self.planner.set_joint_angles(&initial).unwrap();
+                            let result = self.planner.plan(&goal, &self.target_objects);
+                            match result {
+                                Ok(mut plan) => {
+                                    plan.reverse();
+                                    for i in 0..(plan.len() - 1) {
+                                        let mut interpolated_angles =
+                                            ugok::interpolate(&plan[i], &plan[i + 1], 0.1);
+                                        plans.append(&mut interpolated_angles);
+                                    }
+                                }
+                                Err(err) => {
+                                    println!("{:?}", err);
+                                }
+                            }
+                        }
+                        Key::R => {
+                            self.reset_colliding_link_colors();
+                            ugok::set_random_joint_angles(&mut self.planner.robot).unwrap();
+                            self.update_robot();
+                        }
+                        Key::C => {
+                            self.colliding_link_names =
+                                self.planner.get_colliding_link_names(&self.target_objects);
+                            for name in &self.colliding_link_names {
+                                println!("{}", name);
+                                self.viewer.set_temporal_color(name, 0.8, 0.8, 0.6);
+                            }
+                            println!("===========");
+                        }
+                        _ => {}
+                    },
                     _ => {}
                 }
             }
