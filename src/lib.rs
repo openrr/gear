@@ -512,7 +512,7 @@ mod tests {
         let target_pose = Isometry3::new(Vector3::new(0.0, 0.0, -0.5), na::zero());
 
         let robot = k::urdf::create_tree::<f32>(&urdf_robot);
-        let names = checker.get_collision_link_names(&robot, &target, &target_pose);
+        let names = checker.get_colliding_link_names(&robot, &target, &target_pose);
         println!("{:?}", names);
     }
 }
