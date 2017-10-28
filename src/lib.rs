@@ -1,4 +1,19 @@
-#[cfg(assimp)]
+/*
+Copyright 2017 Takashi Ogura
+
+Licensed under the Apache License, Version 2.0 (the "License");
+you may not use this file except in compliance with the License.
+You may obtain a copy of the License at
+
+    http://www.apache.org/licenses/LICENSE-2.0
+
+Unless required by applicable law or agreed to in writing, software
+distributed under the License is distributed on an "AS IS" BASIS,
+WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
+See the License for the specific language governing permissions and
+limitations under the License.
+*/
+#[cfg(feature = "assimp")]
 extern crate assimp;
 
 extern crate k;
@@ -19,7 +34,6 @@ use ncollide::query;
 use ncollide::shape::{Ball, Compound, Cuboid, Cylinder, Shape, ShapeHandle, TriMesh};
 use std::collections::HashMap;
 use std::path::Path;
-use k::JointContainer;
 
 fn from_urdf_pose<T>(pose: &urdf_rs::Pose) -> Isometry3<T>
 where
@@ -39,25 +53,26 @@ where
     )
 }
 
-#[cfg(assimp)]
+#[cfg(feature = "assimp")]
 pub fn load_mesh<P, T>(filename: P, scale: &[f64]) -> Result<TriMesh<na::Point3<T>>>
 where
     P: AsRef<Path>,
     T: Real,
 {
-    let mut importer = Importer::new();
+    let mut importer = assimp::Importer::new();
     importer.pre_transform_vertices(|x| x.enable = true);
     importer.collada_ignore_up_direction(true);
-    let file_string = filename.as_ref().to_str().ok_or(
-        "faild to get string from path",
-    )?;
+    let file_string = filename
+        .as_ref()
+        .to_str()
+        .ok_or("faild to get string from path")?;
     Ok(convert_assimp_scene_to_ncollide_mesh(
         importer.read_file(file_string)?,
         scale,
     ))
 }
 
-#[cfg(assimp)]
+#[cfg(feature = "assimp")]
 fn convert_assimp_scene_to_ncollide_mesh<T>(
     scene: assimp::Scene,
     scale: &[f64],
@@ -96,7 +111,7 @@ where
 }
 
 
-#[cfg(not(assimp))]
+#[cfg(not(feature = "assimp"))]
 pub fn load_mesh<P, T>(_filename: P, _scale: &[f64]) -> Result<TriMesh<na::Point3<T>>>
 where
     P: AsRef<Path>,
@@ -137,10 +152,7 @@ where
             Some(wrap_compound(cube, pose))
         }
         urdf_rs::Geometry::Cylinder { radius, length } => Some(wrap_compound(
-            Cylinder::new(
-                na::convert(length * 0.5),
-                na::convert(radius),
-            ),
+            Cylinder::new(na::convert(length * 0.5), na::convert(radius)),
             pose,
         )),
         urdf_rs::Geometry::Sphere { radius } => {
@@ -190,19 +202,20 @@ where
             prediction: prediction,
         }
     }
-    pub fn get_colliding_link_names(
+    pub fn get_colliding_link_names<R>(
         &self,
-        robot: &k::LinkTree<T>,
+        robot: &R,
         target_shape: &Shape<na::Point3<T>, na::Isometry3<T>>,
         target_pose: &na::Isometry3<T>,
-    ) -> Vec<String> {
+    ) -> Vec<String>
+    where
+        R: k::LinkContainer<T> + k::JointContainer<T>,
+    {
         let mut names = Vec::new();
-        for (trans, link_name) in
-            robot.calc_link_transforms().iter().zip(
-                robot.iter_link().map(
-                    |link| link.name.clone(),
-                ),
-            )
+        for (trans, link_name) in robot
+            .calc_link_transforms()
+            .iter()
+            .zip(robot.get_link_names())
         {
             match self.name_collision_model_map.get(&link_name) {
                 Some(obj) => {
@@ -219,12 +232,42 @@ where
                     }
                 }
                 None => {
-                    println!("{} not found", link_name);
+                    println!("collision model {} not found", link_name);
                 }
             }
         }
         names
     }
+}
+
+pub fn generate_clamped_joint_angles_from_limits<T>(
+    angles: &[T],
+    limits: &Vec<Option<k::Range<T>>>,
+) -> Result<Vec<T>>
+where
+    T: Real + rand::Rand,
+{
+    if angles.len() != limits.len() {
+        return Err(Error::from("size mismatch of input angles and limits"));
+    }
+    Ok(
+        limits
+            .iter()
+            .zip(angles.iter())
+            .map(|(range, angle)| match *range {
+                Some(ref range) => if *angle > range.max {
+                    range.max
+                } else {
+                    if *angle < range.min {
+                        range.min
+                    } else {
+                        *angle
+                    }
+                },
+                None => *angle,
+            })
+            .collect(),
+    )
 }
 
 pub fn generate_random_joint_angles_from_limits<T>(limits: &Vec<Option<k::Range<T>>>) -> Vec<T>
@@ -240,34 +283,44 @@ where
         .collect()
 }
 
-pub struct CollisionAvoidJointPathPlanner {
-    pub robot: k::LinkTree<f64>,
+pub struct CollisionAvoidJointPathPlanner<K>
+where
+    K: k::JointContainer<f64>,
+{
+    pub robot: K,
     pub collision_checker: CollisionChecker<f64>,
     pub step_length: f64,
     pub max_try: usize,
     pub num_smoothing: usize,
 }
 
-impl CollisionAvoidJointPathPlanner {
-    pub fn new(robot: k::LinkTree<f64>, collision_checker: CollisionChecker<f64>) -> Self {
+impl<K> CollisionAvoidJointPathPlanner<K>
+where
+    K: k::JointContainer<f64> + k::LinkContainer<f64>,
+{
+    pub fn new(
+        robot: K,
+        collision_checker: CollisionChecker<f64>,
+        step_length: f64,
+        max_try: usize,
+        num_smoothing: usize,
+    ) -> Self {
         CollisionAvoidJointPathPlanner {
             robot: robot,
             collision_checker: collision_checker,
-            step_length: 0.05,
-            max_try: 2000,
-            num_smoothing: 100,
+            step_length: step_length,
+            max_try: max_try,
+            num_smoothing: num_smoothing,
         }
     }
 
     pub fn is_feasible(
         &mut self,
         joint_angles: &[f64],
-        target_shape: &Shape<na::Point3<f64>, na::Isometry3<f64>>,
-        target_pose: &na::Isometry3<f64>,
+        objects: &Compound<na::Point3<f64>, na::Isometry3<f64>>,
     ) -> bool {
         self.set_joint_angles(joint_angles).unwrap();
-        self.get_colliding_link_names(target_shape, target_pose)
-            .is_empty()
+        self.get_colliding_link_names(objects).is_empty()
     }
 
     pub fn set_joint_angles(
@@ -283,37 +336,36 @@ impl CollisionAvoidJointPathPlanner {
 
     pub fn get_colliding_link_names(
         &self,
-        target_shape: &Shape<na::Point3<f64>, na::Isometry3<f64>>,
-        target_pose: &na::Isometry3<f64>,
+        objects: &Compound<na::Point3<f64>, na::Isometry3<f64>>,
     ) -> Vec<String> {
-        self.collision_checker.get_colliding_link_names(
-            &self.robot,
-            target_shape,
-            target_pose,
-        )
+        let mut ret = Vec::new();
+        for shape in objects.shapes() {
+            let mut colliding_names =
+                self.collision_checker
+                    .get_colliding_link_names(&self.robot, &*shape.1, &shape.0);
+            ret.append(&mut colliding_names);
+        }
+        ret
     }
 
     pub fn plan(
         &mut self,
         goal_angles: &[f64],
-        target_shape: &Shape<na::Point3<f64>, na::Isometry3<f64>>,
-        target_pose: &na::Isometry3<f64>,
+        objects: &Compound<na::Point3<f64>, na::Isometry3<f64>>,
     ) -> std::result::Result<Vec<Vec<f64>>, String> {
         let initial_angles = self.get_joint_angles();
         let limits = self.robot.get_joint_limits();
         let step_length = self.step_length;
         let max_try = self.max_try;
-        if !self.is_feasible(&initial_angles, target_shape, target_pose) ||
-            !self.is_feasible(&goal_angles, target_shape, target_pose)
-        {
-            return Err("Initial or Goal is colliding".to_owned());
+        if !self.is_feasible(&initial_angles, objects) {
+            return Err("Initialis colliding".to_owned());
+        } else if !self.is_feasible(goal_angles, objects) {
+            return Err("Goal is colliding".to_owned());
         }
         let mut path = try!(rrt::dual_rrt_connect(
             &initial_angles,
             goal_angles,
-            |angles: &[f64]| {
-                self.is_feasible(angles, target_shape, target_pose)
-            },
+            |angles: &[f64]| self.is_feasible(angles, objects),
             || generate_random_joint_angles_from_limits(&limits),
             step_length,
             max_try,
@@ -321,11 +373,58 @@ impl CollisionAvoidJointPathPlanner {
         let num_smoothing = self.num_smoothing;
         rrt::smooth_path(
             &mut path,
-            |angles: &[f64]| self.is_feasible(angles, target_shape, target_pose),
+            |angles: &[f64]| self.is_feasible(angles, objects),
             step_length,
             num_smoothing,
         );
         Ok(path)
+    }
+}
+
+pub struct CollisionAvoidJointPathPlannerBuilder<K>
+where
+    K: k::JointContainer<f64>,
+{
+    pub robot: K,
+    pub collision_checker: CollisionChecker<f64>,
+    pub step_length: f64,
+    pub max_try: usize,
+    pub num_smoothing: usize,
+}
+
+impl<K> CollisionAvoidJointPathPlannerBuilder<K>
+where
+    K: k::JointContainer<f64> + k::LinkContainer<f64>,
+{
+    pub fn new(robot: K, collision_checker: CollisionChecker<f64>) -> Self {
+        CollisionAvoidJointPathPlannerBuilder {
+            robot: robot,
+            collision_checker: collision_checker,
+            step_length: 0.1,
+            max_try: 5000,
+            num_smoothing: 100,
+        }
+    }
+    pub fn step_length(mut self, step_length: f64) -> Self {
+        self.step_length = step_length;
+        self
+    }
+    pub fn max_try(mut self, max_try: usize) -> Self {
+        self.max_try = max_try;
+        self
+    }
+    pub fn num_smoothing(mut self, num_smoothing: usize) -> Self {
+        self.num_smoothing = num_smoothing;
+        self
+    }
+    pub fn finalize(self) -> CollisionAvoidJointPathPlanner<K> {
+        CollisionAvoidJointPathPlanner::new(
+            self.robot,
+            self.collision_checker,
+            self.step_length,
+            self.max_try,
+            self.num_smoothing,
+        )
     }
 }
 
