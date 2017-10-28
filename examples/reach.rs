@@ -14,13 +14,13 @@ See the License for the specific language governing permissions and
 limitations under the License.
 */
 extern crate env_logger;
+extern crate gear;
 extern crate glfw;
 extern crate k;
 extern crate nalgebra as na;
 extern crate ncollide;
 extern crate rand;
 extern crate structopt;
-extern crate ugok;
 extern crate urdf_rs;
 extern crate urdf_viz;
 
@@ -36,7 +36,7 @@ struct CollisionAvoidApp<'a> {
     ik_target_pose: na::Isometry3<f64>,
     colliding_link_names: Vec<String>,
     robot: k::LinkTree<f64>,
-    planner: ugok::CollisionAvoidJointPathPlanner<k::RefKinematicChain<f64>>,
+    planner: gear::CollisionAvoidJointPathPlanner<k::RefKinematicChain<f64>>,
 }
 
 impl<'a> CollisionAvoidApp<'a> {
@@ -49,13 +49,13 @@ impl<'a> CollisionAvoidApp<'a> {
             na::UnitQuaternion::from_euler_angles(0.0, 1.57, 1.57),
         );
 
-        let checker_for_planner = ugok::CollisionChecker::<f64>::new(urdf_robot, base_dir, 0.01);
+        let checker_for_planner = gear::CollisionChecker::<f64>::new(urdf_robot, base_dir, 0.01);
         let mut robot_for_planner = k::urdf::create_tree::<f64>(urdf_robot);
         robot_for_planner.set_root_transform(base_transform);
         viewer.update(&robot_for_planner);
 
         let mut arms = k::create_kinematic_chains_with_dof_limit(&robot_for_planner, 7);
-        let planner = ugok::CollisionAvoidJointPathPlannerBuilder::new(
+        let planner = gear::CollisionAvoidJointPathPlannerBuilder::new(
             arms.pop().expect("no arm"),
             checker_for_planner,
         ).max_try(5000)
@@ -176,7 +176,7 @@ impl<'a> CollisionAvoidApp<'a> {
                         }
                         Key::I => {
                             self.reset_colliding_link_colors();
-                            let result = ugok::solve_ik_with_random_initialize(
+                            let result = gear::solve_ik_with_random_initialize(
                                 &solver,
                                 &mut self.planner.robot,
                                 &self.ik_target_pose,
@@ -200,7 +200,7 @@ impl<'a> CollisionAvoidApp<'a> {
                                     plan.reverse();
                                     for i in 0..(plan.len() - 1) {
                                         let mut interpolated_angles =
-                                            ugok::interpolate(&plan[i], &plan[i + 1], 0.1);
+                                            gear::interpolate(&plan[i], &plan[i + 1], 0.1);
                                         plans.append(&mut interpolated_angles);
                                     }
                                 }
@@ -211,7 +211,7 @@ impl<'a> CollisionAvoidApp<'a> {
                         }
                         Key::R => {
                             self.reset_colliding_link_colors();
-                            ugok::set_random_joint_angles(&mut self.planner.robot).unwrap();
+                            gear::set_random_joint_angles(&mut self.planner.robot).unwrap();
                             self.update_robot();
                         }
                         Key::C => {
