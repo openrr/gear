@@ -1,5 +1,6 @@
-# ugok
-Collision Avoidance Path Planning in Rust-lang
+# gear
+
+Collision Avoidance Path Planning for robotics in Rust-lang
 
 ```
 $ cargo run --release --example reach
