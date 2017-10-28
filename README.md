@@ -1,4 +1,4 @@
-# gear
+# gear [![Build Status](https://travis-ci.org/OTL/gear.svg?branch=master)](https://travis-ci.org/OTL/gear) [![crates.io](https://img.shields.io/crates/v/gear.svg)](https://crates.io/crates/gear)
 
 Collision Avoidance Path Planning for robotics in Rust-lang
 
