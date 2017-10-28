@@ -40,7 +40,7 @@ struct CollisionAvoidApp<'a> {
 }
 
 impl<'a> CollisionAvoidApp<'a> {
-    fn new(urdf_robot: &'a urdf_rs::Robot, base_dir: &Path) -> Self {
+    fn new(urdf_robot: &'a urdf_rs::Robot, base_dir: Option<&Path>) -> Self {
         let mut viewer = urdf_viz::Viewer::new(urdf_robot);
 
         viewer.setup(base_dir, false);
@@ -101,9 +101,6 @@ impl<'a> CollisionAvoidApp<'a> {
                 na::UnitQuaternion::from_euler_angles(0.0, -0.1, 0.0),
             );
         viewer.add_axis_cylinders("ik_target", 0.3);
-        if let Some(obj) = viewer.scenes.get_mut("ik_target") {
-            obj.0.set_local_transformation(na::convert(ik_target_pose));
-        }
         CollisionAvoidApp {
             viewer: viewer,
             target_objects: target_objects,
@@ -112,9 +109,6 @@ impl<'a> CollisionAvoidApp<'a> {
             planner: planner,
             robot: robot_for_planner,
         }
-    }
-    fn init(&mut self) {
-        self.update_robot();
     }
     fn update_robot(&mut self) {
         self.viewer.update(&self.robot);
@@ -131,6 +125,8 @@ impl<'a> CollisionAvoidApp<'a> {
         }
     }
     fn run(&mut self) {
+        self.update_robot();
+        self.update_ik_target();
         let mut plans: Vec<Vec<f64>> = Vec::new();
         let solver = k::JacobianIKSolverBuilder::<f64>::new()
             .num_max_try(1000)
@@ -237,9 +233,8 @@ fn main() {
     env_logger::init().unwrap();
     let input_string = env::args().nth(1).unwrap_or("sample.urdf".to_owned());
     let input_path = Path::new(&input_string);
-    let base_dir = input_path.parent().unwrap();
+    let base_dir = input_path.parent();
     let urdf_robot = urdf_rs::utils::read_urdf_or_xacro(input_path).unwrap();
     let mut app = CollisionAvoidApp::new(&urdf_robot, base_dir);
-    app.init();
     app.run();
 }

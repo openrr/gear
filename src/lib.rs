@@ -136,7 +136,7 @@ where
 
 pub fn create_collision_model<T>(
     collision: &urdf_rs::Collision,
-    base_dir: &Path,
+    base_dir: Option<&Path>,
 ) -> Option<Compound<na::Point3<T>, na::Isometry3<T>>>
 where
     T: Real,
@@ -190,7 +190,7 @@ impl<T> CollisionChecker<T>
 where
     T: Real,
 {
-    pub fn new(urdf_robot: &urdf_rs::Robot, base_dir: &Path, prediction: T) -> Self {
+    pub fn new(urdf_robot: &urdf_rs::Robot, base_dir: Option<&Path>, prediction: T) -> Self {
         let mut collisions = HashMap::new();
         for l in &urdf_robot.links {
             if let Some(col) = create_collision_model(&l.collision, base_dir) {
@@ -506,7 +506,7 @@ mod tests {
     #[test]
     fn it_works() {
         let urdf_robot = urdf_rs::read_file("sample.urdf").unwrap();
-        let checker = CollisionChecker::new(&urdf_robot, Path::new("./"), 0.05);
+        let checker = CollisionChecker::new(&urdf_robot, None, 0.05);
 
         let target = Cuboid::new(Vector3::new(0.5, 0.5, 0.5));
         let target_pose = Isometry3::new(Vector3::new(0.0, 0.0, -0.5), na::zero());
