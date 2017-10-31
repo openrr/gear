@@ -34,6 +34,7 @@ use ncollide::query;
 use ncollide::shape::{Ball, Compound, Cuboid, Cylinder, Shape, ShapeHandle, TriMesh};
 use std::collections::HashMap;
 use std::path::Path;
+use k::InverseKinematicsSolver;
 
 fn from_urdf_pose<T>(pose: &urdf_rs::Pose) -> Isometry3<T>
 where
@@ -202,11 +203,46 @@ where
             prediction: prediction,
         }
     }
+    pub fn has_any_colliding<R>(
+        &self,
+        robot: &R,
+        target_shape: &Shape<na::Point3<T>, na::Isometry3<T>>,
+        target_pose: &na::Isometry3<T>,
+    ) -> bool
+    where
+        R: k::LinkContainer<T> + k::JointContainer<T>,
+    {
+        !self.get_colliding_link_names_with_first_return_flag(
+            robot,
+            target_shape,
+            target_pose,
+            true,
+        ).is_empty()
+    }
+
     pub fn get_colliding_link_names<R>(
         &self,
         robot: &R,
         target_shape: &Shape<na::Point3<T>, na::Isometry3<T>>,
         target_pose: &na::Isometry3<T>,
+    ) -> Vec<String>
+    where
+        R: k::LinkContainer<T> + k::JointContainer<T>,
+    {
+        self.get_colliding_link_names_with_first_return_flag(
+            robot,
+            target_shape,
+            target_pose,
+            false,
+        )
+    }
+
+    fn get_colliding_link_names_with_first_return_flag<R>(
+        &self,
+        robot: &R,
+        target_shape: &Shape<na::Point3<T>, na::Isometry3<T>>,
+        target_pose: &na::Isometry3<T>,
+        first_return: bool,
     ) -> Vec<String>
     where
         R: k::LinkContainer<T> + k::JointContainer<T>,
@@ -229,6 +265,9 @@ where
                     );
                     if ctct != Proximity::Disjoint {
                         names.push(link_name);
+                        if first_return {
+                            return names;
+                        }
                     }
                 }
                 None => {
@@ -283,30 +322,35 @@ where
         .collect()
 }
 
-pub struct CollisionAvoidJointPathPlanner<K>
+pub struct CollisionAvoidJointPathPlanner<K, R>
 where
     K: k::JointContainer<f64>,
+    R: k::JointContainer<f64>,
 {
-    pub robot: K,
+    pub moving_arm: K,
+    pub collision_check_robot: R,
     pub collision_checker: CollisionChecker<f64>,
     pub step_length: f64,
     pub max_try: usize,
     pub num_smoothing: usize,
 }
 
-impl<K> CollisionAvoidJointPathPlanner<K>
+impl<K, R> CollisionAvoidJointPathPlanner<K, R>
 where
     K: k::JointContainer<f64> + k::LinkContainer<f64>,
+    R: k::JointContainer<f64> + k::LinkContainer<f64>,
 {
     pub fn new(
-        robot: K,
+        moving_arm: K,
+        collision_check_robot: R,
         collision_checker: CollisionChecker<f64>,
         step_length: f64,
         max_try: usize,
         num_smoothing: usize,
     ) -> Self {
         CollisionAvoidJointPathPlanner {
-            robot: robot,
+            moving_arm: moving_arm,
+            collision_check_robot: collision_check_robot,
             collision_checker: collision_checker,
             step_length: step_length,
             max_try: max_try,
@@ -320,18 +364,34 @@ where
         objects: &Compound<na::Point3<f64>, na::Isometry3<f64>>,
     ) -> bool {
         self.set_joint_angles(joint_angles).unwrap();
-        self.get_colliding_link_names(objects).is_empty()
+        !self.has_any_colliding(objects)
     }
 
     pub fn set_joint_angles(
         &mut self,
         joint_angles: &[f64],
     ) -> std::result::Result<(), k::JointError> {
-        self.robot.set_joint_angles(joint_angles)
+        self.moving_arm.set_joint_angles(joint_angles)
     }
 
     pub fn get_joint_angles(&self) -> Vec<f64> {
-        self.robot.get_joint_angles()
+        self.moving_arm.get_joint_angles()
+    }
+
+    pub fn has_any_colliding(
+        &self,
+        objects: &Compound<na::Point3<f64>, na::Isometry3<f64>>,
+    ) -> bool {
+        for shape in objects.shapes() {
+            if self.collision_checker.has_any_colliding(
+                &self.collision_check_robot,
+                &*shape.1,
+                &shape.0,
+            ) {
+                return true;
+            }
+        }
+        false
     }
 
     pub fn get_colliding_link_names(
@@ -340,9 +400,11 @@ where
     ) -> Vec<String> {
         let mut ret = Vec::new();
         for shape in objects.shapes() {
-            let mut colliding_names =
-                self.collision_checker
-                    .get_colliding_link_names(&self.robot, &*shape.1, &shape.0);
+            let mut colliding_names = self.collision_checker.get_colliding_link_names(
+                &self.collision_check_robot,
+                &*shape.1,
+                &shape.0,
+            );
             ret.append(&mut colliding_names);
         }
         ret
@@ -354,7 +416,7 @@ where
         objects: &Compound<na::Point3<f64>, na::Isometry3<f64>>,
     ) -> std::result::Result<Vec<Vec<f64>>, String> {
         let initial_angles = self.get_joint_angles();
-        let limits = self.robot.get_joint_limits();
+        let limits = self.moving_arm.get_joint_limits();
         let step_length = self.step_length;
         let max_try = self.max_try;
         if !self.is_feasible(&initial_angles, objects) {
@@ -381,24 +443,32 @@ where
     }
 }
 
-pub struct CollisionAvoidJointPathPlannerBuilder<K>
+pub struct CollisionAvoidJointPathPlannerBuilder<K, R>
 where
     K: k::JointContainer<f64>,
+    R: k::JointContainer<f64>,
 {
-    pub robot: K,
+    pub moving_arm: K,
+    pub collision_check_robot: R,
     pub collision_checker: CollisionChecker<f64>,
     pub step_length: f64,
     pub max_try: usize,
     pub num_smoothing: usize,
 }
 
-impl<K> CollisionAvoidJointPathPlannerBuilder<K>
+impl<K, R> CollisionAvoidJointPathPlannerBuilder<K, R>
 where
     K: k::JointContainer<f64> + k::LinkContainer<f64>,
+    R: k::JointContainer<f64> + k::LinkContainer<f64>,
 {
-    pub fn new(robot: K, collision_checker: CollisionChecker<f64>) -> Self {
+    pub fn new(
+        moving_arm: K,
+        collision_check_robot: R,
+        collision_checker: CollisionChecker<f64>,
+    ) -> Self {
         CollisionAvoidJointPathPlannerBuilder {
-            robot: robot,
+            moving_arm: moving_arm,
+            collision_check_robot: collision_check_robot,
             collision_checker: collision_checker,
             step_length: 0.1,
             max_try: 5000,
@@ -417,9 +487,10 @@ where
         self.num_smoothing = num_smoothing;
         self
     }
-    pub fn finalize(self) -> CollisionAvoidJointPathPlanner<K> {
+    pub fn finalize(self) -> CollisionAvoidJointPathPlanner<K, R> {
         CollisionAvoidJointPathPlanner::new(
-            self.robot,
+            self.moving_arm,
+            self.collision_check_robot,
             self.collision_checker,
             self.step_length,
             self.max_try,
@@ -464,14 +535,14 @@ where
 pub fn set_random_joint_angles<T, K>(robot: &mut K) -> std::result::Result<(), k::JointError>
 where
     K: k::JointContainer<T>,
-    T: na::Real + rand::Rand,
+    T: na::Real,
 {
     let angles_vec = robot
         .get_joint_limits()
         .iter()
         .map(|limit| match *limit {
             Some(ref range) => (range.max - range.min) * na::convert(rand::random()) + range.min,
-            None => (rand::random::<T>() - na::convert(0.5)) * na::convert(2.0),
+            None => na::convert::<f64, T>(rand::random::<f64>() - 0.5) * na::convert(2.0 * 3.14),
         })
         .collect::<Vec<T>>();
     robot.set_joint_angles(&angles_vec)
@@ -486,7 +557,7 @@ pub fn solve_ik_with_random_initialize<I, K, T>(
 where
     I: k::InverseKinematicsSolver<T>,
     K: k::KinematicChain<T> + k::JointContainer<T>,
-    T: Real + rand::Rand,
+    T: Real,
 {
     let mut result = Err(k::IKError::NotConverged);
     for _ in 0..num_max_try {
@@ -497,6 +568,48 @@ where
         }
     }
     result
+}
+
+pub struct RandomInitializeIKSolver<T, I>
+where
+    I: InverseKinematicsSolver<T>,
+    T: Real,
+{
+    pub solver: I,
+    pub num_max_try: usize,
+    phantom: std::marker::PhantomData<T>,
+}
+
+impl<T, I> RandomInitializeIKSolver<T, I>
+where
+    T: Real,
+    I: InverseKinematicsSolver<T>,
+{
+    pub fn new(solver: I, num_max_try: usize) -> Self {
+        RandomInitializeIKSolver {
+            solver: solver,
+            num_max_try: num_max_try,
+            phantom: std::marker::PhantomData,
+        }
+    }
+}
+
+impl<T, I> InverseKinematicsSolver<T> for RandomInitializeIKSolver<T, I>
+where
+    T: Real,
+    I: InverseKinematicsSolver<T>,
+{
+    fn solve<K>(
+        &self,
+        arm: &mut K,
+        target_pose: &Isometry3<T>,
+    ) -> ::std::result::Result<T, k::IKError>
+    where
+        K: k::KinematicChain<T>,
+        T: Real,
+    {
+        solve_ik_with_random_initialize(&self.solver, arm, target_pose, self.num_max_try)
+    }
 }
 
 #[cfg(test)]
