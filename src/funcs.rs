@@ -15,11 +15,10 @@ limitations under the License.
 */
 
 use k;
-use na;
-use na::Real;
-use errors::*;
+use na::{self, Real};
 use rand;
 
+use errors::*;
 
 pub fn generate_clamped_joint_angles_from_limits<T>(
     angles: &[T],

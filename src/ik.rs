@@ -14,9 +14,9 @@ See the License for the specific language governing permissions and
 limitations under the License.
 */
 
-use k;
-use k::InverseKinematicsSolver;
+use k::{self, InverseKinematicsSolver};
 use na::{self, Real};
+
 use funcs::*;
 
 pub struct RandomInitializeIKSolver<T, I>

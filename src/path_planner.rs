@@ -25,7 +25,7 @@ use funcs::*;
 pub struct CollisionAvoidJointPathPlanner<K, R>
 where
     K: k::JointContainer<f64>,
-    R: k::JointContainer<f64>,
+    R: k::LinkContainer<f64>,
 {
     pub moving_arm: K,
     pub collision_check_robot: R,
@@ -37,8 +37,8 @@ where
 
 impl<K, R> CollisionAvoidJointPathPlanner<K, R>
 where
-    K: k::JointContainer<f64> + k::LinkContainer<f64>,
-    R: k::JointContainer<f64> + k::LinkContainer<f64>,
+    K: k::JointContainer<f64>,
+    R: k::LinkContainer<f64>,
 {
     pub fn new(
         moving_arm: K,

@@ -15,6 +15,7 @@ limitations under the License.
 */
 
 use assimp;
+use k;
 use na::{self, Isometry3, Real, Translation3, UnitQuaternion, Vector3};
 use ncollide::ncollide_geometry::query::Proximity;
 use ncollide::query;
@@ -23,7 +24,7 @@ use urdf_rs;
 use std::collections::HashMap;
 use std::path::Path;
 use std;
-use k;
+
 use errors::*;
 
 fn from_urdf_pose<T>(pose: &urdf_rs::Pose) -> Isometry3<T>
@@ -200,7 +201,7 @@ where
         target_pose: &na::Isometry3<T>,
     ) -> bool
     where
-        R: k::LinkContainer<T> + k::JointContainer<T>,
+        R: k::LinkContainer<T>,
     {
         !self.get_colliding_link_names_with_first_return_flag(
             robot,
@@ -217,7 +218,7 @@ where
         target_pose: &na::Isometry3<T>,
     ) -> Vec<String>
     where
-        R: k::LinkContainer<T> + k::JointContainer<T>,
+        R: k::LinkContainer<T>,
     {
         self.get_colliding_link_names_with_first_return_flag(
             robot,
@@ -235,7 +236,7 @@ where
         first_return: bool,
     ) -> Vec<String>
     where
-        R: k::LinkContainer<T> + k::JointContainer<T>,
+        R: k::LinkContainer<T>,
     {
         let mut names = Vec::new();
         for (trans, link_name) in robot
