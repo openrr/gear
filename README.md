@@ -17,4 +17,10 @@ then,
 * type `c` to check collision
 
 
-[Video](https://www.youtube.com/watch?v=33VHdUCBTA8)
+The example can handle any urdf files (sample.urdf is used as default)
+
+```
+$ cargo run --release --example reach YOUR_URDF_FILE_PATH
+```
+
+[Video](https://www.youtube.com/watch?v=fYfZR1f2HW0)
