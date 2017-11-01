@@ -1,6 +1,6 @@
 [package]
 name = "gear"
-version = "0.1.0"
+version = "0.1.1"
 authors = ["Takashi Ogura <t.ogura@gmail.com>"]
 description = "Collision avoidance path planning for robotics"
 license = "Apache-2.0"
@@ -34,5 +34,5 @@ structopt-derive = "0.1.0"
 urdf-viz = { version = "0.3.0", default-features = false}
 
 # assimp-sys is not released yet
-[patch.crates-io]
-assimp-sys = { path = "../assimp-sys" }
+#[patch.crates-io]
+#assimp-sys = { path = "../assimp-sys" }
