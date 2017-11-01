@@ -15,7 +15,7 @@ default = ["use-assimp"]
 use-assimp = ["urdf-viz/assimp", "assimp"]
 
 [dependencies]
-k = "0.3.0"
+k = "0.4.0"
 log = "0.3.8"
 nalgebra = "0.13.0"
 ncollide = "0.13.0"
@@ -34,5 +34,5 @@ structopt-derive = "0.1.0"
 urdf-viz = { version = "0.3.0", default-features = false}
 
 # assimp-sys is not released yet
-#[patch.crates-io]
-#assimp-sys = { path = "../assimp-sys" }
+[patch.crates-io]
+assimp-sys = { path = "../assimp-sys" }

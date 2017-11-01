@@ -34,7 +34,7 @@ struct CollisionAvoidApp<'a> {
     target_objects: Compound<na::Point3<f64>, na::Isometry3<f64>>,
     ik_target_pose: na::Isometry3<f64>,
     colliding_link_names: Vec<String>,
-    planner: gear::CollisionAvoidJointPathPlanner<k::RefKinematicChain<f64>, k::LinkTree<f64>>,
+    planner: gear::CollisionAvoidJointPathPlanner<k::RcKinematicChain<f64>, k::LinkTree<f64>>,
 }
 
 impl<'a> CollisionAvoidApp<'a> {
