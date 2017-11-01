@@ -204,6 +204,9 @@ where
 #[cfg(test)]
 mod tests {
     use super::*;
+    use urdf_rs;
+    use ncollide::shape::Cuboid;
+    use na::{Isometry3, Vector3};
 
     #[test]
     fn it_works() {
