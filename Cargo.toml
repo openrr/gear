@@ -2,6 +2,13 @@
 name = "gear"
 version = "0.1.0"
 authors = ["Takashi Ogura <t.ogura@gmail.com>"]
+description = "Collision avoidance path planning for robotics"
+license = "Apache-2.0"
+keywords = ["path planning", "robotics"]
+categories = ["algorithms"]
+repository = "https://github.com/OTL/gear"
+documentation = "http://docs.rs/gear"
+readme = "README.md"
 
 [features]
 default = ["use-assimp"]
