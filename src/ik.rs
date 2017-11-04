@@ -19,12 +19,15 @@ use na::{self, Real};
 
 use funcs::*;
 
+/// Randomize initial joint angles before solving
 pub struct RandomInitializeIKSolver<T, I>
 where
     I: InverseKinematicsSolver<T>,
     T: Real,
 {
+    /// The IK solver to be used after set random joint angles
     pub solver: I,
+    /// The number to try to solve
     pub num_max_try: usize,
     phantom: ::std::marker::PhantomData<T>,
 }

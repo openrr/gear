@@ -22,6 +22,7 @@ use rrt;
 use collision_checker::*;
 use funcs::*;
 
+/// Collision Avoidance Path Planner
 pub struct CollisionAvoidJointPathPlanner<K, R>
 where
     K: k::JointContainer<f64>,
@@ -49,15 +50,15 @@ where
         num_smoothing: usize,
     ) -> Self {
         CollisionAvoidJointPathPlanner {
-            moving_arm: moving_arm,
-            collision_check_robot: collision_check_robot,
-            collision_checker: collision_checker,
-            step_length: step_length,
-            max_try: max_try,
-            num_smoothing: num_smoothing,
+            moving_arm,
+            collision_check_robot,
+            collision_checker,
+            step_length,
+            max_try,
+            num_smoothing,
         }
     }
-
+    /// Check if the joint_angles are OK
     pub fn is_feasible(
         &mut self,
         joint_angles: &[f64],

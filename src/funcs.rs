@@ -20,6 +20,7 @@ use rand;
 
 use errors::*;
 
+/// Clamp joint angles to set angles safely
 pub fn generate_clamped_joint_angles_from_limits<T>(
     angles: &[T],
     limits: &Vec<Option<k::Range<T>>>,
@@ -50,6 +51,7 @@ where
     )
 }
 
+/// Generate random joint angles from the optional limits
 pub fn generate_random_joint_angles_from_limits<T>(limits: &Vec<Option<k::Range<T>>>) -> Vec<T>
 where
     T: Real,
@@ -76,6 +78,7 @@ where
         .sqrt()
 }
 
+/// Interpolate two vectors with the length
 pub fn interpolate<T>(vec1: &[T], vec2: &[T], unit_length: T) -> Vec<Vec<T>>
 where
     T: Real,
@@ -97,6 +100,7 @@ where
     ret
 }
 
+/// Set random joint angles
 pub fn set_random_joint_angles<T, K>(robot: &mut K) -> ::std::result::Result<(), k::JointError>
 where
     K: k::JointContainer<T>,
