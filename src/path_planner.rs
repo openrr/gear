@@ -212,13 +212,13 @@ mod tests {
     #[test]
     fn it_works() {
         let urdf_robot = urdf_rs::read_file("sample.urdf").unwrap();
-        let checker = CollisionChecker::new(&urdf_robot, None, 0.05);
+        let checker = CollisionChecker::from_urdf_robot(&urdf_robot, None, 0.05);
 
         let target = Cuboid::new(Vector3::new(0.5, 0.5, 0.5));
         let target_pose = Isometry3::new(Vector3::new(0.0, 0.0, -0.5), na::zero());
 
         let robot = k::urdf::create_tree::<f32>(&urdf_robot);
         let names = checker.get_colliding_link_names(&robot, &target, &target_pose);
-        println!("{:?}", names);
+        assert_eq!(names, vec!["root", "l_elbow1", "l_wrist1", "l_wrist2"]);
     }
 }
