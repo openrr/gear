@@ -19,7 +19,7 @@ use k;
 use na::{self, Isometry3, Real, Translation3, UnitQuaternion, Vector3};
 use ncollide::ncollide_geometry::query::Proximity;
 use ncollide::query;
-use ncollide::shape::{Ball, Compound, Cuboid, Cylinder, Shape, ShapeHandle, TriMesh};
+use ncollide::shape::{Ball, Cuboid, Cylinder, Shape, ShapeHandle, TriMesh};
 use urdf_rs;
 use std::collections::HashMap;
 use std::path::Path;
@@ -112,43 +112,28 @@ where
     Err(Error::from("mesh is not not supported"))
 }
 
-pub fn wrap_compound<T, S>(
-    shape: S,
-    origin: Isometry3<T>,
-) -> Compound<na::Point3<T>, na::Isometry3<T>>
-where
-    T: Real,
-    S: Shape<na::Point3<T>, na::Isometry3<T>>,
-{
-    let mut shapes = Vec::new();
-    let handle = ShapeHandle::new(shape);
-    shapes.push((origin, handle));
-    Compound::new(shapes)
-}
-
 pub fn create_collision_model<T>(
-    collision: &urdf_rs::Collision,
+    collision_geometry: &urdf_rs::Geometry,
     base_dir: Option<&Path>,
-) -> Option<Compound<na::Point3<T>, na::Isometry3<T>>>
+) -> Option<ShapeHandle<na::Point3<T>, na::Isometry3<T>>>
 where
     T: Real,
 {
-    let pose = from_urdf_pose(&collision.origin);
-    match collision.geometry {
+    match *collision_geometry {
         urdf_rs::Geometry::Box { ref size } => {
             let cube = Cuboid::new(Vector3::new(
                 na::convert(size[0] * 0.5),
                 na::convert(size[1] * 0.5),
                 na::convert(size[2] * 0.5),
             ));
-            Some(wrap_compound(cube, pose))
+            Some(ShapeHandle::new(cube))
         }
-        urdf_rs::Geometry::Cylinder { radius, length } => Some(wrap_compound(
-            Cylinder::new(na::convert(length * 0.5), na::convert(radius)),
-            pose,
-        )),
+        urdf_rs::Geometry::Cylinder { radius, length } => Some(ShapeHandle::new(Cylinder::new(
+            na::convert(length * 0.5),
+            na::convert(radius),
+        ))),
         urdf_rs::Geometry::Sphere { radius } => {
-            Some(wrap_compound(Ball::new(na::convert(radius)), pose))
+            Some(ShapeHandle::new(Ball::new(na::convert(radius))))
         }
         urdf_rs::Geometry::Mesh {
             ref filename,
@@ -161,7 +146,7 @@ where
                 return None;
             }
             if let Ok(mesh) = load_mesh(path, &scale) {
-                Some(wrap_compound(mesh, pose))
+                Some(ShapeHandle::new(mesh))
             } else {
                 None
             }
@@ -169,12 +154,19 @@ where
     }
 }
 
-
+/// Collision checker for a robot
 pub struct CollisionChecker<T>
 where
     T: Real,
 {
-    name_collision_model_map: HashMap<String, Compound<na::Point3<T>, na::Isometry3<T>>>,
+    name_collision_model_map: HashMap<
+        String,
+        (
+            ShapeHandle<na::Point3<T>, na::Isometry3<T>>,
+            na::Isometry3<T>,
+        ),
+    >,
+    /// margin length for collision check
     pub prediction: T,
 }
 
@@ -182,18 +174,41 @@ impl<T> CollisionChecker<T>
 where
     T: Real,
 {
-    pub fn new(urdf_robot: &urdf_rs::Robot, base_dir: Option<&Path>, prediction: T) -> Self {
-        let mut collisions = HashMap::new();
+    /// Create CollisionChecker from HashMap
+    pub fn new(
+        name_collision_model_map: HashMap<
+            String,
+            (
+                ShapeHandle<na::Point3<T>, na::Isometry3<T>>,
+                na::Isometry3<T>,
+            ),
+        >,
+        prediction: T,
+    ) -> Self {
+        CollisionChecker {
+            name_collision_model_map,
+            prediction,
+        }
+    }
+    /// Create CollisionChecker from urdf_rs::Robot
+    pub fn from_urdf_robot(
+        urdf_robot: &urdf_rs::Robot,
+        base_dir: Option<&Path>,
+        prediction: T,
+    ) -> Self {
+        let mut name_collision_model_map = HashMap::new();
         for l in &urdf_robot.links {
-            if let Some(col) = create_collision_model(&l.collision, base_dir) {
-                collisions.insert(l.name.to_string(), col);
+            if let Some(col) = create_collision_model(&l.collision.geometry, base_dir) {
+                let pose = from_urdf_pose(&l.collision.origin);
+                name_collision_model_map.insert(l.name.to_string(), (col, pose));
             }
         }
         CollisionChecker {
-            name_collision_model_map: collisions,
-            prediction: prediction,
+            name_collision_model_map,
+            prediction,
         }
     }
+    /// Check if there are any colliding links
     pub fn has_any_colliding<R>(
         &self,
         robot: &R,
@@ -210,7 +225,7 @@ where
             true,
         ).is_empty()
     }
-
+    /// Returns the names which is colliding with the target shape/pose
     pub fn get_colliding_link_names<R>(
         &self,
         robot: &R,
@@ -246,10 +261,9 @@ where
         {
             match self.name_collision_model_map.get(&link_name) {
                 Some(obj) => {
-                    // TODO: only first shape is supported
                     let ctct = query::proximity(
-                        &(trans * obj.shapes()[0].0),
-                        &*obj.shapes()[0].1,
+                        &(trans * obj.1),
+                        &*obj.0,
                         target_pose,
                         target_shape,
                         self.prediction,

@@ -47,7 +47,8 @@ impl<'a> CollisionAvoidApp<'a> {
             na::UnitQuaternion::from_euler_angles(0.0, 1.57, 1.57),
         );
 
-        let checker_for_planner = gear::CollisionChecker::<f64>::new(urdf_robot, base_dir, 0.01);
+        let checker_for_planner =
+            gear::CollisionChecker::<f64>::from_urdf_robot(urdf_robot, base_dir, 0.01);
         let mut robot_for_planner = k::urdf::create_tree::<f64>(urdf_robot);
         robot_for_planner.set_root_transform(base_transform);
         viewer.update(&robot_for_planner);
