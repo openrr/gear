@@ -40,11 +40,10 @@ struct CollisionAvoidApp<'a> {
 impl<'a> CollisionAvoidApp<'a> {
     fn new(urdf_robot: &'a urdf_rs::Robot) -> Self {
         let mut viewer = urdf_viz::Viewer::new(urdf_robot);
-
         viewer.setup();
 
         let checker_for_planner =
-            gear::CollisionChecker::<f64>::from_urdf_robot(urdf_robot, None, 0.01);
+            gear::CollisionChecker::<f64>::from_urdf_robot(urdf_robot, 0.01);
         let robot_for_planner = k::urdf::create_tree::<f64>(urdf_robot);
         viewer.update(&robot_for_planner);
 

@@ -46,7 +46,7 @@ where
 }
 
 #[cfg(feature = "assimp")]
-pub fn load_mesh<P, T>(filename: P, scale: &[f64]) -> Result<TriMesh<na::Point3<T>>>
+fn load_mesh<P, T>(filename: P, scale: &[f64]) -> Result<TriMesh<na::Point3<T>>>
 where
     P: AsRef<Path>,
     T: Real,
@@ -104,7 +104,7 @@ where
 
 
 #[cfg(not(feature = "assimp"))]
-pub fn load_mesh<P, T>(_filename: P, _scale: &[f64]) -> Result<TriMesh<na::Point3<T>>>
+fn load_mesh<P, T>(_filename: P, _scale: &[f64]) -> Result<TriMesh<na::Point3<T>>>
 where
     P: AsRef<Path>,
     T: Real,
@@ -193,6 +193,15 @@ where
     /// Create CollisionChecker from urdf_rs::Robot
     pub fn from_urdf_robot(
         urdf_robot: &urdf_rs::Robot,
+        prediction: T,
+    ) -> Self {
+        Self::from_urdf_robot_with_base_dir(urdf_robot, None, prediction)
+    }
+    /// Create CollisionChecker from urdf_rs::Robot with base_dir support
+    /// 
+    /// base_dir: mesh files are loaded from this dir if the path does not start with "package://"
+    pub fn from_urdf_robot_with_base_dir(
+        urdf_robot: &urdf_rs::Robot,
         base_dir: Option<&Path>,
         prediction: T,
     ) -> Self {
@@ -207,7 +216,7 @@ where
             name_collision_model_map,
             prediction,
         }
-    }
+    }    
     /// Check if there are any colliding links
     pub fn has_any_colliding<R>(
         &self,

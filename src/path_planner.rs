@@ -212,7 +212,7 @@ mod tests {
     #[test]
     fn it_works() {
         let urdf_robot = urdf_rs::read_file("sample.urdf").unwrap();
-        let checker = CollisionChecker::from_urdf_robot(&urdf_robot, None, 0.05);
+        let checker = CollisionChecker::from_urdf_robot(&urdf_robot, 0.05);
 
         let target = Cuboid::new(Vector3::new(0.5, 0.5, 0.5));
         let target_pose = Isometry3::new(Vector3::new(0.0, 0.0, -0.5), na::zero());
