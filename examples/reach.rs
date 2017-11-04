@@ -38,19 +38,14 @@ struct CollisionAvoidApp<'a> {
 }
 
 impl<'a> CollisionAvoidApp<'a> {
-    fn new(urdf_robot: &'a urdf_rs::Robot, base_dir: Option<&Path>) -> Self {
+    fn new(urdf_robot: &'a urdf_rs::Robot) -> Self {
         let mut viewer = urdf_viz::Viewer::new(urdf_robot);
 
-        viewer.setup(base_dir, false);
-        let base_transform = na::Isometry3::from_parts(
-            na::Translation3::new(0.0, 0.0, 0.0),
-            na::UnitQuaternion::from_euler_angles(0.0, 1.57, 1.57),
-        );
+        viewer.setup();
 
         let checker_for_planner =
-            gear::CollisionChecker::<f64>::from_urdf_robot(urdf_robot, base_dir, 0.01);
-        let mut robot_for_planner = k::urdf::create_tree::<f64>(urdf_robot);
-        robot_for_planner.set_root_transform(base_transform);
+            gear::CollisionChecker::<f64>::from_urdf_robot(urdf_robot, None, 0.01);
+        let robot_for_planner = k::urdf::create_tree::<f64>(urdf_robot);
         viewer.update(&robot_for_planner);
 
         let mut arms = k::create_kinematic_chains_with_dof_limit(&robot_for_planner, 7);
@@ -62,13 +57,9 @@ impl<'a> CollisionAvoidApp<'a> {
             .finalize();
 
         viewer.add_axis_cylinders("origin", 1.0);
-        if let Some(obj) = viewer.scenes.get_mut("origin") {
-            obj.0.set_local_transformation(na::convert(base_transform));
-        }
 
         let target_shape1 = Cuboid::new(na::Vector3::new(0.20, 0.3, 0.1));
-        let target_pose1 =
-            base_transform * na::Isometry3::new(na::Vector3::new(0.6, 0.0, 0.1), na::zero());
+        let target_pose1 = na::Isometry3::new(na::Vector3::new(0.6, 0.0, 0.1), na::zero());
         let mut cube = viewer.window.add_cube(
             target_shape1.half_extents()[0] as f32 * 2.0,
             target_shape1.half_extents()[1] as f32 * 2.0,
@@ -78,8 +69,7 @@ impl<'a> CollisionAvoidApp<'a> {
         cube.set_color(0.5, 0.0, 0.5);
 
         let target_shape2 = Cuboid::new(na::Vector3::new(0.20, 0.3, 0.1));
-        let target_pose2 =
-            base_transform * na::Isometry3::new(na::Vector3::new(0.6, 0.0, 0.6), na::zero());
+        let target_pose2 = na::Isometry3::new(na::Vector3::new(0.6, 0.0, 0.6), na::zero());
         let mut cube2 = viewer.window.add_cube(
             target_shape2.half_extents()[0] as f32 * 2.0,
             target_shape2.half_extents()[1] as f32 * 2.0,
@@ -95,8 +85,7 @@ impl<'a> CollisionAvoidApp<'a> {
         shapes.push((target_pose2, handle2));
         let target_objects = Compound::new(shapes);
 
-        let ik_target_pose = base_transform
-            * na::Isometry3::from_parts(
+        let ik_target_pose = na::Isometry3::from_parts(
                 na::Translation3::new(0.60, 0.40, 0.3),
                 na::UnitQuaternion::from_euler_angles(0.0, -0.1, 0.0),
             );
@@ -147,27 +136,27 @@ impl<'a> CollisionAvoidApp<'a> {
                 match event.value {
                     WindowEvent::Key(code, _, Action::Press, _) => match code {
                         Key::Up => {
-                            self.ik_target_pose.translation.vector[1] += 0.05;
-                            self.update_ik_target();
-                        }
-                        Key::Down => {
-                            self.ik_target_pose.translation.vector[1] -= 0.05;
-                            self.update_ik_target();
-                        }
-                        Key::Left => {
-                            self.ik_target_pose.translation.vector[0] -= 0.05;
-                            self.update_ik_target();
-                        }
-                        Key::Right => {
-                            self.ik_target_pose.translation.vector[0] += 0.05;
-                            self.update_ik_target();
-                        }
-                        Key::B => {
                             self.ik_target_pose.translation.vector[2] += 0.05;
                             self.update_ik_target();
                         }
-                        Key::F => {
+                        Key::Down => {
                             self.ik_target_pose.translation.vector[2] -= 0.05;
+                            self.update_ik_target();
+                        }
+                        Key::Left => {
+                            self.ik_target_pose.translation.vector[1] += 0.05;
+                            self.update_ik_target();
+                        }
+                        Key::Right => {
+                            self.ik_target_pose.translation.vector[1] -= 0.05;
+                            self.update_ik_target();
+                        }
+                        Key::B => {
+                            self.ik_target_pose.translation.vector[0] -= 0.05;
+                            self.update_ik_target();
+                        }
+                        Key::F => {
+                            self.ik_target_pose.translation.vector[0] += 0.05;
                             self.update_ik_target();
                         }
                         Key::I => {
@@ -255,8 +244,7 @@ fn main() {
     env_logger::init().unwrap();
     let input_string = env::args().nth(1).unwrap_or("sample.urdf".to_owned());
     let input_path = Path::new(&input_string);
-    let base_dir = input_path.parent();
     let urdf_robot = urdf_rs::utils::read_urdf_or_xacro(input_path).unwrap();
-    let mut app = CollisionAvoidApp::new(&urdf_robot, base_dir);
+    let mut app = CollisionAvoidApp::new(&urdf_robot);
     app.run();
 }
