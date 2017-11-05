@@ -42,8 +42,7 @@ impl<'a> CollisionAvoidApp<'a> {
         let mut viewer = urdf_viz::Viewer::new(urdf_robot);
         viewer.setup();
 
-        let checker_for_planner =
-            gear::CollisionChecker::<f64>::from_urdf_robot(urdf_robot, 0.01);
+        let checker_for_planner = gear::CollisionChecker::<f64>::from_urdf_robot(urdf_robot, 0.01);
         let robot_for_planner = k::urdf::create_tree::<f64>(urdf_robot);
         viewer.update(&robot_for_planner);
 
@@ -85,9 +84,9 @@ impl<'a> CollisionAvoidApp<'a> {
         let target_objects = Compound::new(shapes);
 
         let ik_target_pose = na::Isometry3::from_parts(
-                na::Translation3::new(0.60, 0.40, 0.3),
-                na::UnitQuaternion::from_euler_angles(0.0, -0.1, 0.0),
-            );
+            na::Translation3::new(0.60, 0.40, 0.3),
+            na::UnitQuaternion::from_euler_angles(0.0, -0.1, 0.0),
+        );
         viewer.add_axis_cylinders("ik_target", 0.3);
         CollisionAvoidApp {
             viewer: viewer,
