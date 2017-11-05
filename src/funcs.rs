@@ -78,12 +78,35 @@ where
         .sqrt()
 }
 
+pub fn modify_to_nearest_angle<T>(vec1: &[T], vec2: &mut [T], limits: &Vec<Option<k::Range<T>>>)
+where
+    T: Real,
+{
+    assert_eq!(vec1.len(), vec2.len());
+    for i in 0..vec1.len() {
+        if limits[i].is_none() {
+            // TODO: deal not only no limit
+            let pi2 = na::convert(3.1415 * 2.0);
+            let dist1 = (vec1[i] - vec2[i]).abs();
+            let dist2 = (vec1[i] - (vec2[i] - pi2)).abs();
+            if dist1 > dist2 {
+                vec2[i] -= pi2;
+            } else {
+                let dist3 = (vec1[i] - (vec2[i] + pi2)).abs();
+                if dist1 > dist3 {
+                    vec2[i] += pi2;
+                }
+            }
+        }
+    }
+}
+
 /// Interpolate two vectors with the length
 pub fn interpolate<T>(vec1: &[T], vec2: &[T], unit_length: T) -> Vec<Vec<T>>
 where
     T: Real,
 {
-    //    let dist = distance(vec1, vec2);
+    assert_eq!(vec1.len(), vec2.len());
     let mut ret: Vec<Vec<T>> = vec![];
     let dist = distance(vec1, vec2);
     let num: usize = (dist / unit_length).to_subset().unwrap() as usize;
