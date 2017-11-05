@@ -62,11 +62,11 @@ where
     {
         let mut result = Err(k::IKError::NotConverged);
         for _ in 0..self.num_max_try {
-            set_random_joint_angles(arm).unwrap();
             result = self.solver.solve(arm, target_pose);
             if result.is_ok() {
                 return result;
             }
+            set_random_joint_angles(arm).unwrap();
         }
         result
     }
