@@ -29,6 +29,24 @@ use std::path::Path;
 use ncollide::shape::{Compound, Cuboid, ShapeHandle};
 use k::InverseKinematicsSolver;
 
+fn add_cube_in_viewer(
+    viewer: &mut urdf_viz::Viewer,
+    cube: &Cuboid<na::Vector3<f64>>,
+    pose: &na::Isometry3<f64>,
+    r: f32,
+    g: f32,
+    b: f32,
+) {
+    let mut cube_vis = viewer.window.add_cube(
+        cube.half_extents()[0] as f32 * 2.0,
+        cube.half_extents()[1] as f32 * 2.0,
+        cube.half_extents()[2] as f32 * 2.0,
+    );
+    cube_vis.set_local_transformation(na::convert(*pose));
+    cube_vis.set_color(r, g, b);
+}
+
+
 struct CollisionAvoidApp<'a> {
     viewer: urdf_viz::Viewer<'a>,
     target_objects: Compound<na::Point3<f64>, na::Isometry3<f64>>,
@@ -58,23 +76,11 @@ impl<'a> CollisionAvoidApp<'a> {
 
         let target_shape1 = Cuboid::new(na::Vector3::new(0.20, 0.3, 0.1));
         let target_pose1 = na::Isometry3::new(na::Vector3::new(0.6, 0.0, 0.1), na::zero());
-        let mut cube = viewer.window.add_cube(
-            target_shape1.half_extents()[0] as f32 * 2.0,
-            target_shape1.half_extents()[1] as f32 * 2.0,
-            target_shape1.half_extents()[2] as f32 * 2.0,
-        );
-        cube.set_local_transformation(na::convert(target_pose1));
-        cube.set_color(0.5, 0.0, 0.5);
+        add_cube_in_viewer(&mut viewer, &target_shape1, &target_pose1, 0.5, 0.0, 0.5);
 
         let target_shape2 = Cuboid::new(na::Vector3::new(0.20, 0.3, 0.1));
         let target_pose2 = na::Isometry3::new(na::Vector3::new(0.6, 0.0, 0.6), na::zero());
-        let mut cube2 = viewer.window.add_cube(
-            target_shape2.half_extents()[0] as f32 * 2.0,
-            target_shape2.half_extents()[1] as f32 * 2.0,
-            target_shape2.half_extents()[2] as f32 * 2.0,
-        );
-        cube2.set_local_transformation(na::convert(target_pose2));
-        cube2.set_color(0.5, 0.5, 0.0);
+        add_cube_in_viewer(&mut viewer, &target_shape2, &target_pose2, 0.5, 0.5, 0.0);
 
         let mut shapes = Vec::new();
         let handle1 = ShapeHandle::new(target_shape1);
