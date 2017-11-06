@@ -41,6 +41,7 @@ where
     K: k::JointContainer<f64>,
     R: k::LinkContainer<f64>,
 {
+    /// Create `CollisionAvoidJointPathPlanner`
     pub fn new(
         moving_arm: K,
         collision_check_robot: R,
@@ -67,18 +68,18 @@ where
         self.set_joint_angles(joint_angles).unwrap();
         !self.has_any_colliding(objects)
     }
-
+    /// Set the joint angles of `self.moving_arm`
     pub fn set_joint_angles(
         &mut self,
         joint_angles: &[f64],
     ) -> std::result::Result<(), k::JointError> {
         self.moving_arm.set_joint_angles(joint_angles)
     }
-
+    /// Get the joint angles of `self.moving_arm`
     pub fn get_joint_angles(&self) -> Vec<f64> {
         self.moving_arm.get_joint_angles()
     }
-
+    /// Check if there are any colliding links
     pub fn has_any_colliding(
         &self,
         objects: &Compound<na::Point3<f64>, na::Isometry3<f64>>,
@@ -94,7 +95,7 @@ where
         }
         false
     }
-
+    /// Get the names of colliding links
     pub fn get_colliding_link_names(
         &self,
         objects: &Compound<na::Point3<f64>, na::Isometry3<f64>>,
@@ -111,6 +112,12 @@ where
         ret
     }
 
+    /// Plan the sequence of joint angles of `self.moving_arm`
+    ///
+    /// # Arguments
+    /// - goal_angles: goal joint angles of `self.moving_arm`.
+    /// start is `self.moving_arm.get_joint_angles()`. set it by
+    /// `set_joint_angles()`.
     pub fn plan(
         &mut self,
         goal_angles: &[f64],
@@ -144,6 +151,7 @@ where
     }
 }
 
+/// Builder pattern to create `CollisionAvoidJointPathPlanner`
 pub struct CollisionAvoidJointPathPlannerBuilder<K, R>
 where
     K: k::JointContainer<f64>,
@@ -199,7 +207,6 @@ where
         )
     }
 }
-
 
 
 #[cfg(test)]

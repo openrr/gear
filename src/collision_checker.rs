@@ -112,7 +112,7 @@ where
     Err(Error::from("mesh is not not supported"))
 }
 
-pub fn create_collision_model<T>(
+fn create_collision_model<T>(
     collision_geometry: &urdf_rs::Geometry,
     base_dir: Option<&Path>,
 ) -> Option<ShapeHandle<na::Point3<T>, na::Isometry3<T>>>

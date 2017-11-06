@@ -17,6 +17,7 @@ limitations under the License.
 use k;
 use na::{self, Real};
 use rand;
+use std::f64::consts::PI;
 
 use errors::*;
 
@@ -60,7 +61,7 @@ where
         .iter()
         .map(|range| match *range {
             Some(ref range) => (range.max - range.min) * na::convert(rand::random()) + range.min,
-            None => na::convert::<f64, T>(rand::random::<f64>() - 0.5) * na::convert(2.0 * 3.14),
+            None => na::convert::<f64, T>(rand::random::<f64>() - 0.5) * na::convert(2.0 * PI),
         })
         .collect()
 }
@@ -78,6 +79,7 @@ where
         .sqrt()
 }
 
+/// Find the nearest angle on is for the joints wihout limits
 pub fn modify_to_nearest_angle<T>(vec1: &[T], vec2: &mut [T], limits: &Vec<Option<k::Range<T>>>)
 where
     T: Real,
@@ -131,4 +133,35 @@ where
 {
     let limits = robot.get_joint_limits();
     robot.set_joint_angles(&generate_random_joint_angles_from_limits(&limits))
+}
+
+
+
+#[cfg(test)]
+mod tests {
+    use super::*;
+    #[test]
+    fn test_funcs() {
+        let limits: Vec<Option<k::Range<f64>>> = vec![
+            None,
+            Some(k::Range::new(-1.0, 1.0)),
+            Some(k::Range::new(0.0, 0.1)),
+        ];
+        for _ in 0..1000 {
+            let angles = generate_random_joint_angles_from_limits(&limits);
+            assert_eq!(angles.len(), limits.len());
+            assert!(angles[0] >= -PI && angles[0] < PI);
+            assert!(angles[1] >= -1.0 && angles[1] < 1.0);
+            assert!(angles[2] >= 0.0 && angles[2] < 0.1);
+        }
+        let angles_fail = vec![0.1];
+        assert!(generate_clamped_joint_angles_from_limits(&angles_fail, &limits).is_err());
+
+        let angles1 = vec![100.0, -2.0, 0.5];
+        let clamped = generate_clamped_joint_angles_from_limits(&angles1, &limits).unwrap();
+        const TORELANCE: f64 = 0.00001;
+        assert!((clamped[0] - 100.0).abs() < TORELANCE);
+        assert!((clamped[1] - (-1.0)).abs() < TORELANCE);
+        assert!((clamped[2] - 0.1).abs() < TORELANCE);
+    }
 }
