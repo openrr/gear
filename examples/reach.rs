@@ -74,19 +74,33 @@ impl<'a> CollisionAvoidApp<'a> {
 
         viewer.add_axis_cylinders("origin", 1.0);
 
-        let target_shape1 = Cuboid::new(na::Vector3::new(0.20, 0.4, 0.1));
-        let target_pose1 = na::Isometry3::new(na::Vector3::new(0.7, 0.0, 0.1), na::zero());
-        add_cube_in_viewer(&mut viewer, &target_shape1, &target_pose1, 0.5, 0.0, 0.5);
+        let obstacle_shape1 = Cuboid::new(na::Vector3::new(0.20, 0.4, 0.1));
+        let obstacle_pose1 = na::Isometry3::new(na::Vector3::new(0.7, 0.0, 0.1), na::zero());
+        add_cube_in_viewer(
+            &mut viewer,
+            &obstacle_shape1,
+            &obstacle_pose1,
+            0.5,
+            0.0,
+            0.5,
+        );
 
-        let target_shape2 = Cuboid::new(na::Vector3::new(0.20, 0.3, 0.1));
-        let target_pose2 = na::Isometry3::new(na::Vector3::new(0.7, 0.0, 0.6), na::zero());
-        add_cube_in_viewer(&mut viewer, &target_shape2, &target_pose2, 0.5, 0.5, 0.0);
+        let obstacle_shape2 = Cuboid::new(na::Vector3::new(0.20, 0.3, 0.1));
+        let obstacle_pose2 = na::Isometry3::new(na::Vector3::new(0.7, 0.0, 0.6), na::zero());
+        add_cube_in_viewer(
+            &mut viewer,
+            &obstacle_shape2,
+            &obstacle_pose2,
+            0.5,
+            0.5,
+            0.0,
+        );
 
         let mut shapes = Vec::new();
-        let handle1 = ShapeHandle::new(target_shape1);
-        shapes.push((target_pose1, handle1));
-        let handle2 = ShapeHandle::new(target_shape2);
-        shapes.push((target_pose2, handle2));
+        let handle1 = ShapeHandle::new(obstacle_shape1);
+        shapes.push((obstacle_pose1, handle1));
+        let handle2 = ShapeHandle::new(obstacle_shape2);
+        shapes.push((obstacle_pose2, handle2));
         let target_objects = Compound::new(shapes);
 
         let ik_target_pose = na::Isometry3::from_parts(
