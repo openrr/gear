@@ -53,6 +53,8 @@ where
 }
 
 /// Generate random joint angles from the optional limits
+///
+/// If the limit is None, -PI <-> PI is used.
 pub fn generate_random_joint_angles_from_limits<T>(limits: &Vec<Option<k::Range<T>>>) -> Vec<T>
 where
     T: Real,

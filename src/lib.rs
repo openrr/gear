@@ -13,6 +13,10 @@ WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
 See the License for the specific language governing permissions and
 limitations under the License.
 */
+//! # Motion Planning Library for Robotics
+//!
+//! Document is not enough. Read `example/reach.rs` for details.
+//!
 #[cfg(feature = "assimp")]
 extern crate assimp;
 

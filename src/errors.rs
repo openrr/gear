@@ -16,11 +16,13 @@ limitations under the License.
 use std::io;
 
 #[derive(Debug)]
+/// Error for `gear`
 pub enum Error {
     Other(String),
     Io(io::Error),
 }
 
+/// Result for `gear`
 pub type Result<T> = ::std::result::Result<T, Error>;
 
 impl From<io::Error> for Error {

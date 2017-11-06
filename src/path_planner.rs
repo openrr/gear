@@ -28,11 +28,19 @@ where
     K: k::JointContainer<f64>,
     R: k::LinkContainer<f64>,
 {
+    /// Instance of `k::JointContainer` to set joint angles
     pub moving_arm: K,
+    /// Instance of `k::LinkContainer` to check the collision
     pub collision_check_robot: R,
+    /// Collision checker
     pub collision_checker: CollisionChecker<f64>,
+    /// Unit length for searching
+    ///
+    /// If the value is large, the path become sparse.
     pub step_length: f64,
+    /// Max num of RRT search loop
     pub max_try: usize,
+    /// Num of path smoothing trials
     pub num_smoothing: usize,
 }
 
