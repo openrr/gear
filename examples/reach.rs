@@ -74,12 +74,12 @@ impl<'a> CollisionAvoidApp<'a> {
 
         viewer.add_axis_cylinders("origin", 1.0);
 
-        let target_shape1 = Cuboid::new(na::Vector3::new(0.20, 0.3, 0.1));
-        let target_pose1 = na::Isometry3::new(na::Vector3::new(0.6, 0.0, 0.1), na::zero());
+        let target_shape1 = Cuboid::new(na::Vector3::new(0.20, 0.4, 0.1));
+        let target_pose1 = na::Isometry3::new(na::Vector3::new(0.7, 0.0, 0.1), na::zero());
         add_cube_in_viewer(&mut viewer, &target_shape1, &target_pose1, 0.5, 0.0, 0.5);
 
         let target_shape2 = Cuboid::new(na::Vector3::new(0.20, 0.3, 0.1));
-        let target_pose2 = na::Isometry3::new(na::Vector3::new(0.6, 0.0, 0.6), na::zero());
+        let target_pose2 = na::Isometry3::new(na::Vector3::new(0.7, 0.0, 0.6), na::zero());
         add_cube_in_viewer(&mut viewer, &target_shape2, &target_pose2, 0.5, 0.5, 0.0);
 
         let mut shapes = Vec::new();
@@ -90,7 +90,7 @@ impl<'a> CollisionAvoidApp<'a> {
         let target_objects = Compound::new(shapes);
 
         let ik_target_pose = na::Isometry3::from_parts(
-            na::Translation3::new(0.60, 0.40, 0.3),
+            na::Translation3::new(0.40, 0.20, 0.3),
             na::UnitQuaternion::from_euler_angles(0.0, -0.1, 0.0),
         );
         viewer.add_axis_cylinders("ik_target", 0.3);
