@@ -54,10 +54,9 @@ where
     let mut importer = assimp::Importer::new();
     importer.pre_transform_vertices(|x| x.enable = true);
     importer.collada_ignore_up_direction(true);
-    let file_string = filename
-        .as_ref()
-        .to_str()
-        .ok_or("faild to get string from path")?;
+    let file_string = filename.as_ref().to_str().ok_or(
+        "faild to get string from path",
+    )?;
     Ok(convert_assimp_scene_to_ncollide_mesh(
         importer.read_file(file_string)?,
         scale,
@@ -159,13 +158,8 @@ pub struct CollisionChecker<T>
 where
     T: Real,
 {
-    name_collision_model_map: HashMap<
-        String,
-        (
-            ShapeHandle<na::Point3<T>, na::Isometry3<T>>,
-            na::Isometry3<T>,
-        ),
-    >,
+    name_collision_model_map:
+        HashMap<String, (ShapeHandle<na::Point3<T>, na::Isometry3<T>>, na::Isometry3<T>)>,
     /// margin length for collision check
     pub prediction: T,
 }
@@ -178,10 +172,8 @@ where
     pub fn new(
         name_collision_model_map: HashMap<
             String,
-            (
-                ShapeHandle<na::Point3<T>, na::Isometry3<T>>,
-                na::Isometry3<T>,
-            ),
+            (ShapeHandle<na::Point3<T>, na::Isometry3<T>>,
+             na::Isometry3<T>),
         >,
         prediction: T,
     ) -> Self {
@@ -191,14 +183,11 @@ where
         }
     }
     /// Create CollisionChecker from urdf_rs::Robot
-    pub fn from_urdf_robot(
-        urdf_robot: &urdf_rs::Robot,
-        prediction: T,
-    ) -> Self {
+    pub fn from_urdf_robot(urdf_robot: &urdf_rs::Robot, prediction: T) -> Self {
         Self::from_urdf_robot_with_base_dir(urdf_robot, None, prediction)
     }
     /// Create CollisionChecker from urdf_rs::Robot with base_dir support
-    /// 
+    ///
     /// base_dir: mesh files are loaded from this dir if the path does not start with "package://"
     pub fn from_urdf_robot_with_base_dir(
         urdf_robot: &urdf_rs::Robot,
@@ -216,7 +205,7 @@ where
             name_collision_model_map,
             prediction,
         }
-    }    
+    }
     /// Check if there are any colliding links
     pub fn has_any_colliding<R>(
         &self,
@@ -263,10 +252,10 @@ where
         R: k::LinkContainer<T>,
     {
         let mut names = Vec::new();
-        for (trans, link_name) in robot
-            .calc_link_transforms()
-            .iter()
-            .zip(robot.get_link_names())
+        for (trans, link_name) in
+            robot.calc_link_transforms().iter().zip(
+                robot.get_link_names(),
+            )
         {
             match self.name_collision_model_map.get(&link_name) {
                 Some(obj) => {

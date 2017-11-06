@@ -37,15 +37,17 @@ where
             .iter()
             .zip(angles.iter())
             .map(|(range, angle)| match *range {
-                Some(ref range) => if *angle > range.max {
-                    range.max
-                } else {
-                    if *angle < range.min {
-                        range.min
+                Some(ref range) => {
+                    if *angle > range.max {
+                        range.max
                     } else {
-                        *angle
+                        if *angle < range.min {
+                            range.min
+                        } else {
+                            *angle
+                        }
                     }
-                },
+                }
                 None => *angle,
             })
             .collect(),

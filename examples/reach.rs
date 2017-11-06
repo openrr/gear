@@ -121,8 +121,9 @@ impl<'a> CollisionAvoidApp<'a> {
     }
     fn update_ik_target(&mut self) {
         if let Some(obj) = self.viewer.scenes.get_mut("ik_target") {
-            obj.0
-                .set_local_transformation(na::convert(self.ik_target_pose));
+            obj.0.set_local_transformation(
+                na::convert(self.ik_target_pose),
+            );
         }
     }
     fn reset_colliding_link_colors(&mut self) {
@@ -152,52 +153,80 @@ impl<'a> CollisionAvoidApp<'a> {
 
             for event in self.viewer.events().iter() {
                 match event.value {
-                    WindowEvent::Key(code, _, Action::Press, _) => match code {
-                        Key::Up => {
-                            self.ik_target_pose.translation.vector[2] += 0.05;
-                            self.update_ik_target();
-                        }
-                        Key::Down => {
-                            self.ik_target_pose.translation.vector[2] -= 0.05;
-                            self.update_ik_target();
-                        }
-                        Key::Left => {
-                            self.ik_target_pose.translation.vector[1] += 0.05;
-                            self.update_ik_target();
-                        }
-                        Key::Right => {
-                            self.ik_target_pose.translation.vector[1] -= 0.05;
-                            self.update_ik_target();
-                        }
-                        Key::B => {
-                            self.ik_target_pose.translation.vector[0] -= 0.05;
-                            self.update_ik_target();
-                        }
-                        Key::F => {
-                            self.ik_target_pose.translation.vector[0] += 0.05;
-                            self.update_ik_target();
-                        }
-                        Key::I => {
-                            self.reset_colliding_link_colors();
-                            let result =
-                                solver.solve(&mut self.planner.moving_arm, &self.ik_target_pose);
-                            if result.is_ok() {
-                                self.update_robot();
-                            } else {
-                                println!("fail!!");
+                    WindowEvent::Key(code, _, Action::Press, _) => {
+                        match code {
+                            Key::Up => {
+                                self.ik_target_pose.translation.vector[2] += 0.05;
+                                self.update_ik_target();
                             }
-                        }
-                        Key::G => {
-                            self.reset_colliding_link_colors();
-                            let result =
-                                solver.solve(&mut self.planner.moving_arm, &self.ik_target_pose);
-                            if result.is_ok() {
+                            Key::Down => {
+                                self.ik_target_pose.translation.vector[2] -= 0.05;
+                                self.update_ik_target();
+                            }
+                            Key::Left => {
+                                self.ik_target_pose.translation.vector[1] += 0.05;
+                                self.update_ik_target();
+                            }
+                            Key::Right => {
+                                self.ik_target_pose.translation.vector[1] -= 0.05;
+                                self.update_ik_target();
+                            }
+                            Key::B => {
+                                self.ik_target_pose.translation.vector[0] -= 0.05;
+                                self.update_ik_target();
+                            }
+                            Key::F => {
+                                self.ik_target_pose.translation.vector[0] += 0.05;
+                                self.update_ik_target();
+                            }
+                            Key::I => {
+                                self.reset_colliding_link_colors();
+                                let result = solver.solve(
+                                    &mut self.planner.moving_arm,
+                                    &self.ik_target_pose,
+                                );
+                                if result.is_ok() {
+                                    self.update_robot();
+                                } else {
+                                    println!("fail!!");
+                                }
+                            }
+                            Key::G => {
+                                self.reset_colliding_link_colors();
+                                let result = solver.solve(
+                                    &mut self.planner.moving_arm,
+                                    &self.ik_target_pose,
+                                );
+                                if result.is_ok() {
+                                    let goal = self.planner.get_joint_angles();
+                                    let result = self.planner.plan(&initial, &goal, &self.target_objects);
+                                    match result {
+                                        Ok(mut plan) => {
+                                            initial = plan.last().unwrap().clone();
+                                            plan.reverse();
+                                            for i in 0..(plan.len() - 1) {
+                                                let mut interpolated_angles =
+                                                    gear::interpolate(&plan[i], &plan[i + 1], 0.1);
+                                                plans.append(&mut interpolated_angles);
+                                            }
+                                        }
+                                        Err(err) => {
+                                            println!("{:?}", err);
+                                        }
+                                    }
+                                } else {
+                                    println!("fail!!");
+                                }
+                            }
+                            Key::M => {
+                                initial = self.planner.get_joint_angles();
+                            }
+                            Key::P => {
                                 let goal = self.planner.get_joint_angles();
                                 self.planner.set_joint_angles(&initial).unwrap();
                                 let result = self.planner.plan(&goal, &self.target_objects);
                                 match result {
                                     Ok(mut plan) => {
-                                        initial = plan.last().unwrap().clone();
                                         plan.reverse();
                                         for i in 0..(plan.len() - 1) {
                                             let mut interpolated_angles =
@@ -209,47 +238,25 @@ impl<'a> CollisionAvoidApp<'a> {
                                         println!("{:?}", err);
                                     }
                                 }
-                            } else {
-                                println!("fail!!");
                             }
-                        }
-                        Key::M => {
-                            initial = self.planner.get_joint_angles();
-                        }
-                        Key::P => {
-                            let goal = self.planner.get_joint_angles();
-                            self.planner.set_joint_angles(&initial).unwrap();
-                            let result = self.planner.plan(&goal, &self.target_objects);
-                            match result {
-                                Ok(mut plan) => {
-                                    plan.reverse();
-                                    for i in 0..(plan.len() - 1) {
-                                        let mut interpolated_angles =
-                                            gear::interpolate(&plan[i], &plan[i + 1], 0.1);
-                                        plans.append(&mut interpolated_angles);
-                                    }
+                            Key::R => {
+                                self.reset_colliding_link_colors();
+                                gear::set_random_joint_angles(&mut self.planner.moving_arm)
+                                    .unwrap();
+                                self.update_robot();
+                            }
+                            Key::C => {
+                                self.colliding_link_names =
+                                    self.planner.get_colliding_link_names(&self.target_objects);
+                                for name in &self.colliding_link_names {
+                                    println!("{}", name);
+                                    self.viewer.set_temporal_color(name, 0.8, 0.8, 0.6);
                                 }
-                                Err(err) => {
-                                    println!("{:?}", err);
-                                }
+                                println!("===========");
                             }
+                            _ => {}
                         }
-                        Key::R => {
-                            self.reset_colliding_link_colors();
-                            gear::set_random_joint_angles(&mut self.planner.moving_arm).unwrap();
-                            self.update_robot();
-                        }
-                        Key::C => {
-                            self.colliding_link_names =
-                                self.planner.get_colliding_link_names(&self.target_objects);
-                            for name in &self.colliding_link_names {
-                                println!("{}", name);
-                                self.viewer.set_temporal_color(name, 0.8, 0.8, 0.6);
-                            }
-                            println!("===========");
-                        }
-                        _ => {}
-                    },
+                    }
                     _ => {}
                 }
             }

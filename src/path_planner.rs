@@ -97,7 +97,8 @@ where
                 &self.collision_check_robot,
                 &*shape.1,
                 &shape.0,
-            ) {
+            )
+            {
                 return true;
             }
         }
@@ -128,20 +129,20 @@ where
     /// `set_joint_angles()`.
     pub fn plan(
         &mut self,
+        start_angles: &[f64],
         goal_angles: &[f64],
         objects: &Compound<na::Point3<f64>, na::Isometry3<f64>>,
     ) -> std::result::Result<Vec<Vec<f64>>, String> {
-        let initial_angles = self.get_joint_angles();
         let limits = self.moving_arm.get_joint_limits();
         let step_length = self.step_length;
         let max_try = self.max_try;
-        if !self.is_feasible(&initial_angles, objects) {
+        if !self.is_feasible(start_angles, objects) {
             return Err("Initialis colliding".to_owned());
         } else if !self.is_feasible(goal_angles, objects) {
             return Err("Goal is colliding".to_owned());
         }
         let mut path = try!(rrt::dual_rrt_connect(
-            &initial_angles,
+            start_angles,
             goal_angles,
             |angles: &[f64]| self.is_feasible(angles, objects),
             || generate_random_joint_angles_from_limits(&limits),
