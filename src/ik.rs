@@ -61,12 +61,16 @@ where
         T: Real,
     {
         let mut result = Err(k::IKError::NotConverged);
+        let limits = arm.get_joint_limits();
+        let initial_angles = arm.get_joint_angles();
         for _ in 0..self.num_max_try {
             result = self.solver.solve(arm, target_pose);
             if result.is_ok() {
                 return result;
             }
-            set_random_joint_angles(arm).unwrap();
+            let mut new_angles = generate_random_joint_angles_from_limits(&limits);
+            modify_to_nearest_angle(&initial_angles, &mut new_angles, &limits);
+            arm.set_joint_angles(&new_angles)?;
         }
         result
     }
