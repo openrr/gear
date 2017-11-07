@@ -224,17 +224,26 @@ mod tests {
     use urdf_rs;
     use ncollide::shape::Cuboid;
     use na::{Isometry3, Vector3};
+    use k::JointContainer;
 
     #[test]
-    fn it_works() {
+    fn collision_check() {
         let urdf_robot = urdf_rs::read_file("sample.urdf").unwrap();
         let checker = CollisionChecker::from_urdf_robot(&urdf_robot, 0.05);
 
-        let target = Cuboid::new(Vector3::new(0.5, 0.5, 0.5));
-        let target_pose = Isometry3::new(Vector3::new(0.0, 0.0, -0.5), na::zero());
+        let target = Cuboid::new(Vector3::new(0.5, 1.0, 0.5));
+        let target_pose = Isometry3::new(Vector3::new(0.9, 0.0, 0.0), na::zero());
 
-        let robot = k::urdf::create_tree::<f32>(&urdf_robot);
+        let mut robot = k::urdf::create_tree::<f32>(&urdf_robot);
+
         let names = checker.get_colliding_link_names(&robot, &target, &target_pose);
-        assert_eq!(names, vec!["root", "l_elbow1", "l_wrist1", "l_wrist2"]);
+        assert_eq!(names, vec!["l_elbow1", "l_wrist1", "l_wrist2"]);
+        let angles = vec![-1.3, 0.0, 0.0, 0.0, 0.0, 0.0];
+        robot.set_joint_angles(&angles).unwrap();
+        let names = checker.get_colliding_link_names(&robot, &target, &target_pose);
+        assert_eq!(names, vec!["l_wrist1", "l_wrist2"]);
+        let target_pose = Isometry3::new(Vector3::new(0.7, 0.0, 0.0), na::zero());
+        let names = checker.get_colliding_link_names(&robot, &target, &target_pose);
+        assert_eq!(names, vec!["l_shoulder2", "l_shoulder3", "l_elbow1", "l_wrist1", "l_wrist2"]);
     }
 }
