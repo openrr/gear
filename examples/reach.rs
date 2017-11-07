@@ -223,8 +223,7 @@ impl<'a> CollisionAvoidApp<'a> {
                             }
                             Key::P => {
                                 let goal = self.planner.get_joint_angles();
-                                self.planner.set_joint_angles(&initial).unwrap();
-                                let result = self.planner.plan(&goal, &self.target_objects);
+                                let result = self.planner.plan(&initial, &goal, &self.target_objects);
                                 match result {
                                     Ok(mut plan) => {
                                         plan.reverse();
