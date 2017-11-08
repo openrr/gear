@@ -257,6 +257,7 @@ fn main() {
     let input_end_link = env::args().nth(2).unwrap_or("l_wrist2".to_owned());
     let planner = gear::build_from_urdf_file_and_end_link_name(&input_string, &input_end_link)
         .unwrap()
+        .collision_check_margin(0.01)
         .finalize();
     let mut app = CollisionAvoidApp::new(planner);
     app.run();

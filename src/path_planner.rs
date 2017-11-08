@@ -285,11 +285,23 @@ mod tests {
         let mut robot = k::urdf::create_tree::<f32>(&urdf_robot);
 
         let names = checker.get_colliding_link_names(&robot, &target, &target_pose);
-        assert_eq!(names, vec!["l_elbow1", "l_wrist1", "l_wrist2"]);
-        let angles = vec![-1.3, 0.0, 0.0, 0.0, 0.0, 0.0];
+        assert_eq!(
+            names,
+            vec![
+                "l_elbow1",
+                "l_wrist1",
+                "l_wrist2",
+                "l_gripper1",
+                "l_gripper2",
+            ]
+        );
+        let angles = vec![-1.3, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0];
         robot.set_joint_angles(&angles).unwrap();
         let names = checker.get_colliding_link_names(&robot, &target, &target_pose);
-        assert_eq!(names, vec!["l_wrist1", "l_wrist2"]);
+        assert_eq!(
+            names,
+            vec!["l_wrist1", "l_wrist2", "l_gripper1", "l_gripper2"]
+        );
         let target_pose = Isometry3::new(Vector3::new(0.7, 0.0, 0.0), na::zero());
         let names = checker.get_colliding_link_names(&robot, &target, &target_pose);
         assert_eq!(
@@ -300,15 +312,16 @@ mod tests {
                 "l_elbow1",
                 "l_wrist1",
                 "l_wrist2",
+                "l_gripper1",
+                "l_gripper2",
             ]
         );
     }
     #[test]
     fn from_urdf() {
-        let planner = CollisionAvoidJointPathPlannerBuilder::from_urdf_file_and_end_link_name(
-            "sample.urdf",
-            "l_wrist2",
-        ).collision_check_margin(0.01)
+        let _ = build_from_urdf_file_and_end_link_name("sample.urdf", "l_wrist2")
+            .unwrap()
+            .collision_check_margin(0.01)
             .finalize();
     }
 }
