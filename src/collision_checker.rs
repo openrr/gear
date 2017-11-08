@@ -70,6 +70,7 @@ fn convert_assimp_scene_to_ncollide_mesh<T>(
 where
     T: Real,
 {
+    use std;
     let mut vertices = Vec::new();
     let mut indices = Vec::new();
     let mut last_index: usize = 0;
