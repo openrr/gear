@@ -14,12 +14,14 @@ See the License for the specific language governing permissions and
 limitations under the License.
 */
 use std::io;
+use urdf_rs;
 
 #[derive(Debug)]
 /// Error for `gear`
 pub enum Error {
     Other(String),
     Io(io::Error),
+    Urdf(urdf_rs::UrdfError),
 }
 
 /// Result for `gear`
@@ -34,5 +36,11 @@ impl From<io::Error> for Error {
 impl<'a> From<&'a str> for Error {
     fn from(err: &'a str) -> Error {
         Error::Other(err.to_owned())
+    }
+}
+
+impl From<urdf_rs::UrdfError> for Error {
+    fn from(err: urdf_rs::UrdfError) -> Error {
+        Error::Urdf(err)
     }
 }
