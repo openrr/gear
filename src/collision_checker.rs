@@ -13,7 +13,7 @@ WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
 See the License for the specific language governing permissions and
 limitations under the License.
 */
-
+#[cfg(feature = "use-assimp")]
 use assimp;
 use k;
 use na::{self, Isometry3, Real, Translation3, UnitQuaternion, Vector3};
@@ -23,7 +23,6 @@ use ncollide::shape::{Ball, Cuboid, Cylinder, Shape, ShapeHandle, TriMesh};
 use urdf_rs;
 use std::collections::HashMap;
 use std::path::Path;
-use std;
 
 use errors::*;
 
