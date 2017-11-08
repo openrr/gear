@@ -18,8 +18,11 @@ use na;
 use ncollide::shape::Compound;
 use std;
 use rrt;
+use std::path::Path;
+use urdf_rs;
 
 use collision_checker::*;
+use errors::*;
 use funcs::*;
 
 /// Collision Avoidance Path Planner
@@ -42,6 +45,8 @@ where
     pub max_try: usize,
     /// Num of path smoothing trials
     pub num_smoothing: usize,
+    /// The robot instance which is used to create the robot model
+    pub urdf_robot: Option<urdf_rs::Robot>,
 }
 
 impl<K, R> CollisionAvoidJointPathPlanner<K, R>
@@ -65,6 +70,7 @@ where
             step_length,
             max_try,
             num_smoothing,
+            urdf_robot: None,
         }
     }
     /// Check if the joint_angles are OK
@@ -172,6 +178,8 @@ where
     pub step_length: f64,
     pub max_try: usize,
     pub num_smoothing: usize,
+    pub collision_check_margin: Option<f64>,
+    pub urdf_robot: Option<urdf_rs::Robot>,
 }
 
 impl<K, R> CollisionAvoidJointPathPlannerBuilder<K, R>
@@ -191,7 +199,13 @@ where
             step_length: 0.1,
             max_try: 5000,
             num_smoothing: 100,
+            collision_check_margin: None,
+            urdf_robot: None,
         }
+    }
+    pub fn collision_check_margin(mut self, length: f64) -> Self {
+        self.collision_check_margin = Some(length);
+        self
     }
     pub fn step_length(mut self, step_length: f64) -> Self {
         self.step_length = step_length;
@@ -205,18 +219,52 @@ where
         self.num_smoothing = num_smoothing;
         self
     }
-    pub fn finalize(self) -> CollisionAvoidJointPathPlanner<K, R> {
-        CollisionAvoidJointPathPlanner::new(
+    pub fn finalize(mut self) -> CollisionAvoidJointPathPlanner<K, R> {
+        let mut planner = CollisionAvoidJointPathPlanner::new(
             self.moving_arm,
             self.collision_check_robot,
             self.collision_checker,
             self.step_length,
             self.max_try,
             self.num_smoothing,
-        )
+        );
+        if let Some(margin) = self.collision_check_margin {
+            self.collision_checker.prediction = margin;
+        }
+        planner.urdf_robot = self.urdf_robot;
+        planner
     }
 }
 
+
+pub fn build_from_urdf_file_and_end_link_name<P>(
+    file_path: P,
+    end_link_name: &str,
+) -> Result<CollisionAvoidJointPathPlannerBuilder<k::RcKinematicChain<f64>, k::LinkTree<f64>>>
+where
+    P: AsRef<Path>,
+{
+    let urdf_robot = urdf_rs::utils::read_urdf_or_xacro(file_path.as_ref())?;
+    const DEFAULT_MARGIN: f64 = 0.0;
+    let collision_checker = CollisionChecker::<f64>::from_urdf_robot(&urdf_robot, DEFAULT_MARGIN);
+    let collision_check_robot = k::urdf::create_tree::<f64>(&urdf_robot);
+    let moving_arm = collision_check_robot
+        .iter()
+        .find(|&ljn_ref| ljn_ref.borrow().data.name == end_link_name)
+        .and_then(|ljn| Some(k::RcKinematicChain::new(end_link_name, ljn)))
+        .ok_or(Error::Other(format!("{} not found", end_link_name)))?;
+
+    Ok(CollisionAvoidJointPathPlannerBuilder {
+        moving_arm: moving_arm,
+        collision_check_robot,
+        collision_checker,
+        step_length: 0.1,
+        max_try: 5000,
+        num_smoothing: 100,
+        collision_check_margin: None,
+        urdf_robot: Some(urdf_robot),
+    })
+}
 
 #[cfg(test)]
 mod tests {
@@ -244,6 +292,23 @@ mod tests {
         assert_eq!(names, vec!["l_wrist1", "l_wrist2"]);
         let target_pose = Isometry3::new(Vector3::new(0.7, 0.0, 0.0), na::zero());
         let names = checker.get_colliding_link_names(&robot, &target, &target_pose);
-        assert_eq!(names, vec!["l_shoulder2", "l_shoulder3", "l_elbow1", "l_wrist1", "l_wrist2"]);
+        assert_eq!(
+            names,
+            vec![
+                "l_shoulder2",
+                "l_shoulder3",
+                "l_elbow1",
+                "l_wrist1",
+                "l_wrist2",
+            ]
+        );
+    }
+    #[test]
+    fn from_urdf() {
+        let planner = CollisionAvoidJointPathPlannerBuilder::from_urdf_file_and_end_link_name(
+            "sample.urdf",
+            "l_wrist2",
+        ).collision_check_margin(0.01)
+            .finalize();
     }
 }
