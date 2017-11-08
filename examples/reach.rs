@@ -59,8 +59,9 @@ impl CollisionAvoidApp {
         viewer.setup(planner.urdf_robot.as_ref().unwrap());
         viewer.add_axis_cylinders("origin", 1.0);
 
-        let obstacle_shape1 = Cuboid::new(na::Vector3::new(0.20, 0.4, 0.1));
+        let obstacle_shape1 = Cuboid::new(na::Vector3::<f64>::new(0.20, 0.4, 0.1));
         let obstacle_pose1 = na::Isometry3::new(na::Vector3::new(0.7, 0.0, 0.1), na::zero());
+
         add_cube_in_viewer(
             &mut viewer,
             &obstacle_shape1,
@@ -81,13 +82,10 @@ impl CollisionAvoidApp {
             0.0,
         );
 
-        let mut shapes = Vec::new();
-        let handle1 = ShapeHandle::new(obstacle_shape1);
-        shapes.push((obstacle_pose1, handle1));
-        let handle2 = ShapeHandle::new(obstacle_shape2);
-        shapes.push((obstacle_pose2, handle2));
-        let target_objects = Compound::new(shapes);
-
+        let target_objects = Compound::new(vec![
+            (obstacle_pose1, ShapeHandle::new(obstacle_shape1)),
+            (obstacle_pose2, ShapeHandle::new(obstacle_shape2)),
+        ]);
         let ik_target_pose = na::Isometry3::from_parts(
             na::Translation3::new(0.40, 0.20, 0.3),
             na::UnitQuaternion::from_euler_angles(0.0, -0.1, 0.0),
