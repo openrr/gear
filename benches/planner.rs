@@ -35,8 +35,7 @@ fn bench_ik_and_plan(b: &mut Bencher) {
     let input_path = Path::new("sample.urdf");
     let urdf_robot = urdf_rs::utils::read_urdf_or_xacro(input_path).unwrap();
 
-    let checker_for_planner =
-        gear::CollisionChecker::<f64>::from_urdf_robot(&urdf_robot, 0.01);
+    let checker_for_planner = gear::CollisionChecker::<f64>::from_urdf_robot(&urdf_robot, 0.01);
     let robot_for_planner = k::urdf::create_tree::<f64>(&urdf_robot);
 
     let mut arms = k::create_kinematic_chains_with_dof_limit(&robot_for_planner, 7);
@@ -72,7 +71,7 @@ fn bench_ik_and_plan(b: &mut Bencher) {
         let mut ik_target_pose = na::Isometry3::from_parts(
             na::Translation3::new(0.40, 0.20, 0.3),
             na::UnitQuaternion::from_euler_angles(0.0, -0.1, 0.0),
-        );        
+        );
         planner.set_joint_angles(&initial).unwrap();
         solver
             .solve(&mut planner.moving_arm, &ik_target_pose)

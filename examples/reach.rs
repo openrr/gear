@@ -19,13 +19,9 @@ extern crate glfw;
 extern crate k;
 extern crate nalgebra as na;
 extern crate ncollide;
-extern crate rand;
-extern crate structopt;
-extern crate urdf_rs;
 extern crate urdf_viz;
 
 use glfw::{Action, Key, WindowEvent};
-use std::path::Path;
 use ncollide::shape::{Compound, Cuboid, ShapeHandle};
 use k::InverseKinematicsSolver;
 
@@ -47,31 +43,20 @@ fn add_cube_in_viewer(
 }
 
 
-struct CollisionAvoidApp<'a> {
-    viewer: urdf_viz::Viewer<'a>,
+struct CollisionAvoidApp {
+    planner: gear::CollisionAvoidJointPathPlanner<k::RcKinematicChain<f64>, k::LinkTree<f64>>,
     target_objects: Compound<na::Point3<f64>, na::Isometry3<f64>>,
     ik_target_pose: na::Isometry3<f64>,
     colliding_link_names: Vec<String>,
-    planner: gear::CollisionAvoidJointPathPlanner<k::RcKinematicChain<f64>, k::LinkTree<f64>>,
+    viewer: urdf_viz::Viewer,
 }
 
-impl<'a> CollisionAvoidApp<'a> {
-    fn new(urdf_robot: &'a urdf_rs::Robot) -> Self {
-        let mut viewer = urdf_viz::Viewer::new(urdf_robot);
-        viewer.setup();
-
-        let checker_for_planner = gear::CollisionChecker::<f64>::from_urdf_robot(urdf_robot, 0.01);
-        let robot_for_planner = k::urdf::create_tree::<f64>(urdf_robot);
-        viewer.update(&robot_for_planner);
-
-        let mut arms = k::create_kinematic_chains_with_dof_limit(&robot_for_planner, 7);
-        let planner = gear::CollisionAvoidJointPathPlannerBuilder::new(
-            arms.pop().expect("no arms found"),
-            robot_for_planner,
-            checker_for_planner,
-        ).max_try(5000)
-            .finalize();
-
+impl CollisionAvoidApp {
+    fn new(
+        planner: gear::CollisionAvoidJointPathPlanner<k::RcKinematicChain<f64>, k::LinkTree<f64>>,
+    ) -> Self {
+        let mut viewer = urdf_viz::Viewer::new();
+        viewer.setup(planner.urdf_robot.as_ref().unwrap());
         viewer.add_axis_cylinders("origin", 1.0);
 
         let obstacle_shape1 = Cuboid::new(na::Vector3::new(0.20, 0.4, 0.1));
@@ -109,11 +94,11 @@ impl<'a> CollisionAvoidApp<'a> {
         );
         viewer.add_axis_cylinders("ik_target", 0.3);
         CollisionAvoidApp {
-            viewer: viewer,
-            target_objects: target_objects,
-            ik_target_pose: ik_target_pose,
+            viewer,
+            target_objects,
+            ik_target_pose,
             colliding_link_names: Vec::new(),
-            planner: planner,
+            planner,
         }
     }
     fn update_robot(&mut self) {
@@ -199,7 +184,8 @@ impl<'a> CollisionAvoidApp<'a> {
                                 );
                                 if result.is_ok() {
                                     let goal = self.planner.get_joint_angles();
-                                    let result = self.planner.plan(&initial, &goal, &self.target_objects);
+                                    let result =
+                                        self.planner.plan(&initial, &goal, &self.target_objects);
                                     match result {
                                         Ok(mut plan) => {
                                             initial = plan.last().unwrap().clone();
@@ -223,7 +209,8 @@ impl<'a> CollisionAvoidApp<'a> {
                             }
                             Key::P => {
                                 let goal = self.planner.get_joint_angles();
-                                let result = self.planner.plan(&initial, &goal, &self.target_objects);
+                                let result =
+                                    self.planner.plan(&initial, &goal, &self.target_objects);
                                 match result {
                                     Ok(mut plan) => {
                                         plan.reverse();
@@ -267,8 +254,10 @@ fn main() {
     use std::env;
     env_logger::init().unwrap();
     let input_string = env::args().nth(1).unwrap_or("sample.urdf".to_owned());
-    let input_path = Path::new(&input_string);
-    let urdf_robot = urdf_rs::utils::read_urdf_or_xacro(input_path).unwrap();
-    let mut app = CollisionAvoidApp::new(&urdf_robot);
+    let input_end_link = env::args().nth(2).unwrap_or("l_wrist2".to_owned());
+    let planner = gear::build_from_urdf_file_and_end_link_name(&input_string, &input_end_link)
+        .unwrap()
+        .finalize();
+    let mut app = CollisionAvoidApp::new(planner);
     app.run();
 }
