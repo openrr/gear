@@ -19,7 +19,7 @@ use k;
 use na::{self, Isometry3, Real, Translation3, UnitQuaternion, Vector3};
 use ncollide::ncollide_geometry::query::Proximity;
 use ncollide::query;
-use ncollide::shape::{Ball, Cuboid, Cylinder, Shape, ShapeHandle, TriMesh};
+use ncollide::shape::{Ball, Cuboid3, Cylinder, Shape3, ShapeHandle3, TriMesh};
 use urdf_rs;
 use std::collections::HashMap;
 use std::path::Path;
@@ -114,25 +114,25 @@ where
 fn create_collision_model<T>(
     collision_geometry: &urdf_rs::Geometry,
     base_dir: Option<&Path>,
-) -> Option<ShapeHandle<na::Point3<T>, na::Isometry3<T>>>
+) -> Option<ShapeHandle3<T>>
 where
     T: Real,
 {
     match *collision_geometry {
         urdf_rs::Geometry::Box { ref size } => {
-            let cube = Cuboid::new(Vector3::new(
+            let cube = Cuboid3::new(Vector3::new(
                 na::convert(size[0] * 0.5),
                 na::convert(size[1] * 0.5),
                 na::convert(size[2] * 0.5),
             ));
-            Some(ShapeHandle::new(cube))
+            Some(ShapeHandle3::new(cube))
         }
-        urdf_rs::Geometry::Cylinder { radius, length } => Some(ShapeHandle::new(Cylinder::new(
+        urdf_rs::Geometry::Cylinder { radius, length } => Some(ShapeHandle3::new(Cylinder::new(
             na::convert(length * 0.5),
             na::convert(radius),
         ))),
         urdf_rs::Geometry::Sphere { radius } => {
-            Some(ShapeHandle::new(Ball::new(na::convert(radius))))
+            Some(ShapeHandle3::new(Ball::new(na::convert(radius))))
         }
         urdf_rs::Geometry::Mesh {
             ref filename,
@@ -145,7 +145,7 @@ where
                 return None;
             }
             if let Ok(mesh) = load_mesh(path, &scale) {
-                Some(ShapeHandle::new(mesh))
+                Some(ShapeHandle3::new(mesh))
             } else {
                 None
             }
@@ -158,8 +158,7 @@ pub struct CollisionChecker<T>
 where
     T: Real,
 {
-    name_collision_model_map:
-        HashMap<String, (ShapeHandle<na::Point3<T>, na::Isometry3<T>>, na::Isometry3<T>)>,
+    name_collision_model_map: HashMap<String, (ShapeHandle3<T>, na::Isometry3<T>)>,
     /// margin length for collision check
     pub prediction: T,
 }
@@ -170,11 +169,7 @@ where
 {
     /// Create CollisionChecker from HashMap
     pub fn new(
-        name_collision_model_map: HashMap<
-            String,
-            (ShapeHandle<na::Point3<T>, na::Isometry3<T>>,
-             na::Isometry3<T>),
-        >,
+        name_collision_model_map: HashMap<String, (ShapeHandle3<T>, na::Isometry3<T>)>,
         prediction: T,
     ) -> Self {
         CollisionChecker {
@@ -210,7 +205,7 @@ where
     pub fn has_any_colliding<R>(
         &self,
         robot: &R,
-        target_shape: &Shape<na::Point3<T>, na::Isometry3<T>>,
+        target_shape: &Shape3<T>,
         target_pose: &na::Isometry3<T>,
     ) -> bool
     where
@@ -227,7 +222,7 @@ where
     pub fn get_colliding_link_names<R>(
         &self,
         robot: &R,
-        target_shape: &Shape<na::Point3<T>, na::Isometry3<T>>,
+        target_shape: &Shape3<T>,
         target_pose: &na::Isometry3<T>,
     ) -> Vec<String>
     where
@@ -244,7 +239,7 @@ where
     fn get_colliding_link_names_with_first_return_flag<R>(
         &self,
         robot: &R,
-        target_shape: &Shape<na::Point3<T>, na::Isometry3<T>>,
+        target_shape: &Shape3<T>,
         target_pose: &na::Isometry3<T>,
         first_return: bool,
     ) -> Vec<String>

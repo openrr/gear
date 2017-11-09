@@ -14,8 +14,7 @@ See the License for the specific language governing permissions and
 limitations under the License.
 */
 use k;
-use na;
-use ncollide::shape::Compound;
+use ncollide::shape::Compound3;
 use std;
 use rrt;
 use std::path::Path;
@@ -74,11 +73,7 @@ where
         }
     }
     /// Check if the joint_angles are OK
-    pub fn is_feasible(
-        &mut self,
-        joint_angles: &[f64],
-        objects: &Compound<na::Point3<f64>, na::Isometry3<f64>>,
-    ) -> bool {
+    pub fn is_feasible(&mut self, joint_angles: &[f64], objects: &Compound3<f64>) -> bool {
         self.set_joint_angles(joint_angles).unwrap();
         !self.has_any_colliding(objects)
     }
@@ -94,10 +89,7 @@ where
         self.moving_arm.get_joint_angles()
     }
     /// Check if there are any colliding links
-    pub fn has_any_colliding(
-        &self,
-        objects: &Compound<na::Point3<f64>, na::Isometry3<f64>>,
-    ) -> bool {
+    pub fn has_any_colliding(&self, objects: &Compound3<f64>) -> bool {
         for shape in objects.shapes() {
             if self.collision_checker.has_any_colliding(
                 &self.collision_check_robot,
@@ -111,10 +103,7 @@ where
         false
     }
     /// Get the names of colliding links
-    pub fn get_colliding_link_names(
-        &self,
-        objects: &Compound<na::Point3<f64>, na::Isometry3<f64>>,
-    ) -> Vec<String> {
+    pub fn get_colliding_link_names(&self, objects: &Compound3<f64>) -> Vec<String> {
         let mut ret = Vec::new();
         for shape in objects.shapes() {
             let mut colliding_names = self.collision_checker.get_colliding_link_names(
@@ -137,7 +126,7 @@ where
         &mut self,
         start_angles: &[f64],
         goal_angles: &[f64],
-        objects: &Compound<na::Point3<f64>, na::Isometry3<f64>>,
+        objects: &Compound3<f64>,
     ) -> std::result::Result<Vec<Vec<f64>>, String> {
         let limits = self.moving_arm.get_joint_limits();
         let step_length = self.step_length;

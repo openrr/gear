@@ -22,30 +22,34 @@ extern crate ncollide;
 extern crate urdf_viz;
 
 use glfw::{Action, Key, WindowEvent};
-use ncollide::shape::{Compound, Cuboid, ShapeHandle};
+use ncollide::shape::{Compound3, Cuboid3, ShapeHandle3};
 use k::InverseKinematicsSolver;
 
-fn add_cube_in_viewer(
+fn add_shape_in_viewer(
     viewer: &mut urdf_viz::Viewer,
-    cube: &Cuboid<na::Vector3<f64>>,
+    shape: &ShapeHandle3<f64>,
     pose: &na::Isometry3<f64>,
     r: f32,
     g: f32,
     b: f32,
 ) {
-    let mut cube_vis = viewer.window.add_cube(
-        cube.half_extents()[0] as f32 * 2.0,
-        cube.half_extents()[1] as f32 * 2.0,
-        cube.half_extents()[2] as f32 * 2.0,
-    );
-    cube_vis.set_local_transformation(na::convert(*pose));
-    cube_vis.set_color(r, g, b);
+    let mut scene_node = if let Some(cube) = shape.as_shape::<Cuboid3<f64>>() {
+        viewer.window.add_cube(
+            cube.half_extents()[0] as f32 * 2.0,
+            cube.half_extents()[1] as f32 * 2.0,
+            cube.half_extents()[2] as f32 * 2.0,
+        )
+    } else {
+        panic!("not support shape");
+    };
+    scene_node.set_local_transformation(na::convert(*pose));
+    scene_node.set_color(r, g, b);
 }
 
 
 struct CollisionAvoidApp {
     planner: gear::CollisionAvoidJointPathPlanner<k::RcKinematicChain<f64>, k::LinkTree<f64>>,
-    target_objects: Compound<na::Point3<f64>, na::Isometry3<f64>>,
+    target_objects: Compound3<f64>,
     ik_target_pose: na::Isometry3<f64>,
     colliding_link_names: Vec<String>,
     viewer: urdf_viz::Viewer,
@@ -59,10 +63,9 @@ impl CollisionAvoidApp {
         viewer.setup(planner.urdf_robot.as_ref().unwrap());
         viewer.add_axis_cylinders("origin", 1.0);
 
-        let obstacle_shape1 = Cuboid::new(na::Vector3::<f64>::new(0.20, 0.4, 0.1));
+        let obstacle_shape1 = ShapeHandle3::new(Cuboid3::new(na::Vector3::new(0.20, 0.4, 0.1)));
         let obstacle_pose1 = na::Isometry3::new(na::Vector3::new(0.7, 0.0, 0.1), na::zero());
-
-        add_cube_in_viewer(
+        add_shape_in_viewer(
             &mut viewer,
             &obstacle_shape1,
             &obstacle_pose1,
@@ -71,9 +74,9 @@ impl CollisionAvoidApp {
             0.5,
         );
 
-        let obstacle_shape2 = Cuboid::new(na::Vector3::new(0.20, 0.3, 0.1));
+        let obstacle_shape2 = ShapeHandle3::new(Cuboid3::new(na::Vector3::new(0.20, 0.3, 0.1)));
         let obstacle_pose2 = na::Isometry3::new(na::Vector3::new(0.7, 0.0, 0.6), na::zero());
-        add_cube_in_viewer(
+        add_shape_in_viewer(
             &mut viewer,
             &obstacle_shape2,
             &obstacle_pose2,
@@ -82,9 +85,9 @@ impl CollisionAvoidApp {
             0.0,
         );
 
-        let target_objects = Compound::new(vec![
-            (obstacle_pose1, ShapeHandle::new(obstacle_shape1)),
-            (obstacle_pose2, ShapeHandle::new(obstacle_shape2)),
+        let target_objects = Compound3::new(vec![
+            (obstacle_pose1, obstacle_shape1),
+            (obstacle_pose2, obstacle_shape2),
         ]);
         let ik_target_pose = na::Isometry3::from_parts(
             na::Translation3::new(0.40, 0.20, 0.3),
