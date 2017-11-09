@@ -23,7 +23,6 @@ extern crate urdf_viz;
 
 use glfw::{Action, Key, WindowEvent};
 use ncollide::shape::{Compound3, Cuboid3, ShapeHandle3};
-use k::InverseKinematicsSolver;
 
 fn add_shape_in_viewer(
     viewer: &mut urdf_viz::Viewer,
@@ -47,20 +46,24 @@ fn add_shape_in_viewer(
 }
 
 
-struct CollisionAvoidApp {
-    planner: gear::CollisionAvoidJointPathPlanner<k::RcKinematicChain<f64>, k::LinkTree<f64>>,
+struct CollisionAvoidApp<I>
+where
+    I: gear::InverseKinematicsSolver<f64>,
+{
+    planner: gear::JointPathPlannerWithIK<I>,
     target_objects: Compound3<f64>,
     ik_target_pose: na::Isometry3<f64>,
     colliding_link_names: Vec<String>,
     viewer: urdf_viz::Viewer,
 }
 
-impl CollisionAvoidApp {
-    fn new(
-        planner: gear::CollisionAvoidJointPathPlanner<k::RcKinematicChain<f64>, k::LinkTree<f64>>,
-    ) -> Self {
+impl<I> CollisionAvoidApp<I>
+where
+    I: gear::InverseKinematicsSolver<f64>,
+{
+    fn new(planner: gear::JointPathPlannerWithIK<I>) -> Self {
         let mut viewer = urdf_viz::Viewer::new();
-        viewer.setup(planner.urdf_robot.as_ref().unwrap());
+        viewer.setup(planner.path_planner.urdf_robot.as_ref().unwrap());
         viewer.add_axis_cylinders("origin", 1.0);
 
         let obstacle_shape1 = ShapeHandle3::new(Cuboid3::new(na::Vector3::new(0.20, 0.4, 0.1)));
@@ -103,7 +106,9 @@ impl CollisionAvoidApp {
         }
     }
     fn update_robot(&mut self) {
-        self.viewer.update(&self.planner.collision_check_robot);
+        self.viewer.update(
+            &self.planner.path_planner.collision_check_robot,
+        );
     }
     fn update_ik_target(&mut self) {
         if let Some(obj) = self.viewer.scenes.get_mut("ik_target") {
@@ -121,14 +126,6 @@ impl CollisionAvoidApp {
         self.update_robot();
         self.update_ik_target();
         let mut plans: Vec<Vec<f64>> = Vec::new();
-        let solver = k::JacobianIKSolverBuilder::<f64>::new()
-            .num_max_try(1000)
-            .allowable_target_distance(0.01)
-            .move_epsilon(0.00001)
-            .jacobian_move_epsilon(0.001)
-            .finalize();
-        let solver = gear::RandomInitializeIKSolver::new(solver, 100);
-        let mut initial = self.planner.get_joint_angles();
         while self.viewer.render() {
             if !plans.is_empty() {
                 self.planner
@@ -167,10 +164,7 @@ impl CollisionAvoidApp {
                             }
                             Key::I => {
                                 self.reset_colliding_link_colors();
-                                let result = solver.solve(
-                                    &mut self.planner.moving_arm,
-                                    &self.ik_target_pose,
-                                );
+                                let result = self.planner.solve_ik(&self.ik_target_pose);
                                 if result.is_ok() {
                                     self.update_robot();
                                 } else {
@@ -179,40 +173,10 @@ impl CollisionAvoidApp {
                             }
                             Key::G => {
                                 self.reset_colliding_link_colors();
-                                let result = solver.solve(
-                                    &mut self.planner.moving_arm,
+                                match self.planner.plan_with_ik(
                                     &self.ik_target_pose,
-                                );
-                                if result.is_ok() {
-                                    let goal = self.planner.get_joint_angles();
-                                    let result =
-                                        self.planner.plan(&initial, &goal, &self.target_objects);
-                                    match result {
-                                        Ok(mut plan) => {
-                                            initial = plan.last().unwrap().clone();
-                                            plan.reverse();
-                                            for i in 0..(plan.len() - 1) {
-                                                let mut interpolated_angles =
-                                                    gear::interpolate(&plan[i], &plan[i + 1], 0.1);
-                                                plans.append(&mut interpolated_angles);
-                                            }
-                                        }
-                                        Err(err) => {
-                                            println!("{:?}", err);
-                                        }
-                                    }
-                                } else {
-                                    println!("fail!!");
-                                }
-                            }
-                            Key::M => {
-                                initial = self.planner.get_joint_angles();
-                            }
-                            Key::P => {
-                                let goal = self.planner.get_joint_angles();
-                                let result =
-                                    self.planner.plan(&initial, &goal, &self.target_objects);
-                                match result {
+                                    &self.target_objects,
+                                ) {
                                     Ok(mut plan) => {
                                         plan.reverse();
                                         for i in 0..(plan.len() - 1) {
@@ -221,20 +185,23 @@ impl CollisionAvoidApp {
                                             plans.append(&mut interpolated_angles);
                                         }
                                     }
-                                    Err(err) => {
-                                        println!("{:?}", err);
+                                    Err(error) => {
+                                        println!("failed to reach!! {}", error);
                                     }
-                                }
+                                };
                             }
                             Key::R => {
                                 self.reset_colliding_link_colors();
-                                gear::set_random_joint_angles(&mut self.planner.moving_arm)
-                                    .unwrap();
+                                gear::set_random_joint_angles(
+                                    &mut self.planner.path_planner.moving_arm,
+                                ).unwrap();
                                 self.update_robot();
                             }
                             Key::C => {
                                 self.colliding_link_names =
-                                    self.planner.get_colliding_link_names(&self.target_objects);
+                                    self.planner.path_planner.get_colliding_link_names(
+                                        &self.target_objects,
+                                    );
                                 for name in &self.colliding_link_names {
                                     println!("{}", name);
                                     self.viewer.set_temporal_color(name, 0.8, 0.8, 0.6);
@@ -260,6 +227,13 @@ fn main() {
         .unwrap()
         .collision_check_margin(0.01)
         .finalize();
-    let mut app = CollisionAvoidApp::new(planner);
+    let solver = gear::JacobianIKSolverBuilder::<f64>::new()
+        .num_max_try(1000)
+        .allowable_target_distance(0.01)
+        .move_epsilon(0.00001)
+        .jacobian_move_epsilon(0.001)
+        .finalize();
+    let solver = gear::RandomInitializeIKSolver::new(solver, 100);
+    let mut app = CollisionAvoidApp::new(gear::JointPathPlannerWithIK::new(planner, solver));
     app.run();
 }

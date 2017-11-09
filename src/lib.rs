@@ -43,3 +43,9 @@ pub use ik::*;
 
 mod path_planner;
 pub use path_planner::*;
+
+mod ik_planner;
+pub use ik_planner::*;
+
+// re-export k::IK modules
+pub use k::{InverseKinematicsSolver, JacobianIKSolver, JacobianIKSolverBuilder};

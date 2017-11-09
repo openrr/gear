@@ -30,7 +30,7 @@ let robot_for_planner = k::urdf::create_tree::<f64>(&urdf_robot);
 let mut arms = k::create_kinematic_chains_with_dof_limit(&robot_for_planner, 7);
 
 // Create motion planner
-let mut planner = gear::CollisionAvoidJointPathPlannerBuilder::new(
+let mut planner = gear::JointPathPlannerBuilder::new(
     arms.pop().expect("no arms found"),
     robot_for_planner,
     checker_for_planner,
@@ -91,9 +91,7 @@ then,
 
 * Up/Down/Left/Right/`f`/`b` to move IK target
 * type `g` to move the end of the arm to the target
-* type `m` to use current pose as init pose
 * type `i` to reach the target
-* type `p` to plan
 
 * type `r` to set random pose
 * type `c` to check collision

@@ -25,7 +25,7 @@ use errors::*;
 use funcs::*;
 
 /// Collision Avoidance Path Planner
-pub struct CollisionAvoidJointPathPlanner<K, R>
+pub struct JointPathPlanner<K, R>
 where
     K: k::JointContainer<f64>,
     R: k::LinkContainer<f64>,
@@ -48,12 +48,12 @@ where
     pub urdf_robot: Option<urdf_rs::Robot>,
 }
 
-impl<K, R> CollisionAvoidJointPathPlanner<K, R>
+impl<K, R> JointPathPlanner<K, R>
 where
     K: k::JointContainer<f64>,
     R: k::LinkContainer<f64>,
 {
-    /// Create `CollisionAvoidJointPathPlanner`
+    /// Create `JointPathPlanner`
     pub fn new(
         moving_arm: K,
         collision_check_robot: R,
@@ -62,7 +62,7 @@ where
         max_try: usize,
         num_smoothing: usize,
     ) -> Self {
-        CollisionAvoidJointPathPlanner {
+        JointPathPlanner {
             moving_arm,
             collision_check_robot,
             collision_checker,
@@ -127,23 +127,32 @@ where
         start_angles: &[f64],
         goal_angles: &[f64],
         objects: &Compound3<f64>,
-    ) -> std::result::Result<Vec<Vec<f64>>, String> {
+    ) -> Result<Vec<Vec<f64>>> {
         let limits = self.moving_arm.get_joint_limits();
         let step_length = self.step_length;
         let max_try = self.max_try;
+        let current_angles = self.moving_arm.get_joint_angles();
         if !self.is_feasible(start_angles, objects) {
-            return Err("Initialis colliding".to_owned());
+            self.moving_arm.set_joint_angles(&current_angles)?;
+            return Err(Error::Collision("Initialis colliding".to_owned()));
         } else if !self.is_feasible(goal_angles, objects) {
-            return Err("Goal is colliding".to_owned());
+            self.moving_arm.set_joint_angles(&current_angles)?;
+            return Err(Error::Collision("Goal is colliding".to_owned()));
         }
-        let mut path = try!(rrt::dual_rrt_connect(
+        let mut path = match rrt::dual_rrt_connect(
             start_angles,
             goal_angles,
             |angles: &[f64]| self.is_feasible(angles, objects),
             || generate_random_joint_angles_from_limits(&limits),
             step_length,
             max_try,
-        ));
+        ) {
+            Ok(p) => p,
+            Err(error) => {
+                self.moving_arm.set_joint_angles(&current_angles)?;
+                return Err(Error::from(error));
+            }
+        };
         let num_smoothing = self.num_smoothing;
         rrt::smooth_path(
             &mut path,
@@ -155,8 +164,8 @@ where
     }
 }
 
-/// Builder pattern to create `CollisionAvoidJointPathPlanner`
-pub struct CollisionAvoidJointPathPlannerBuilder<K, R>
+/// Builder pattern to create `JointPathPlanner`
+pub struct JointPathPlannerBuilder<K, R>
 where
     K: k::JointContainer<f64>,
     R: k::LinkContainer<f64>,
@@ -171,7 +180,7 @@ where
     pub urdf_robot: Option<urdf_rs::Robot>,
 }
 
-impl<K, R> CollisionAvoidJointPathPlannerBuilder<K, R>
+impl<K, R> JointPathPlannerBuilder<K, R>
 where
     K: k::JointContainer<f64>,
     R: k::LinkContainer<f64>,
@@ -181,7 +190,7 @@ where
         collision_check_robot: R,
         collision_checker: CollisionChecker<f64>,
     ) -> Self {
-        CollisionAvoidJointPathPlannerBuilder {
+        JointPathPlannerBuilder {
             moving_arm: moving_arm,
             collision_check_robot: collision_check_robot,
             collision_checker: collision_checker,
@@ -208,8 +217,8 @@ where
         self.num_smoothing = num_smoothing;
         self
     }
-    pub fn finalize(mut self) -> CollisionAvoidJointPathPlanner<K, R> {
-        let mut planner = CollisionAvoidJointPathPlanner::new(
+    pub fn finalize(mut self) -> JointPathPlanner<K, R> {
+        let mut planner = JointPathPlanner::new(
             self.moving_arm,
             self.collision_check_robot,
             self.collision_checker,
@@ -229,7 +238,7 @@ where
 pub fn build_from_urdf_file_and_end_link_name<P>(
     file_path: P,
     end_link_name: &str,
-) -> Result<CollisionAvoidJointPathPlannerBuilder<k::RcKinematicChain<f64>, k::LinkTree<f64>>>
+) -> Result<JointPathPlannerBuilder<k::RcKinematicChain<f64>, k::LinkTree<f64>>>
 where
     P: AsRef<Path>,
 {
@@ -243,8 +252,8 @@ where
         .and_then(|ljn| Some(k::RcKinematicChain::new(end_link_name, ljn)))
         .ok_or(Error::Other(format!("{} not found", end_link_name)))?;
 
-    Ok(CollisionAvoidJointPathPlannerBuilder {
-        moving_arm: moving_arm,
+    Ok(JointPathPlannerBuilder {
+        moving_arm,
         collision_check_robot,
         collision_checker,
         step_length: 0.1,
@@ -259,6 +268,7 @@ where
 mod tests {
     use super::*;
     use urdf_rs;
+    use na;
     use ncollide::shape::Cuboid;
     use na::{Isometry3, Vector3};
     use k::JointContainer;
