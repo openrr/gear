@@ -347,7 +347,7 @@ mod tests {
     }
     #[test]
     fn from_urdf() {
-        let _ = build_from_urdf_file_and_end_link_name("sample.urdf", "l_wrist2")
+        let _ = get_joint_path_planner_builder_from_urdf("sample.urdf", "l_wrist2")
             .unwrap()
             .collision_check_margin(0.01)
             .finalize();
