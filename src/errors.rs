@@ -14,14 +14,20 @@ See the License for the specific language governing permissions and
 limitations under the License.
 */
 use std::io;
+use std::fmt;
 use urdf_rs;
+use k;
+
 
 #[derive(Debug)]
 /// Error for `gear`
 pub enum Error {
     Other(String),
+    Collision(String),
     Io(io::Error),
     Urdf(urdf_rs::UrdfError),
+    Ik(k::IKError),
+    Joint(k::JointError),
 }
 
 /// Result for `gear`
@@ -38,9 +44,52 @@ impl<'a> From<&'a str> for Error {
         Error::Other(err.to_owned())
     }
 }
+impl From<String> for Error {
+    fn from(err: String) -> Error {
+        Error::Other(err)
+    }
+}
 
 impl From<urdf_rs::UrdfError> for Error {
     fn from(err: urdf_rs::UrdfError) -> Error {
         Error::Urdf(err)
+    }
+}
+
+impl From<k::IKError> for Error {
+    fn from(err: k::IKError) -> Error {
+        Error::Ik(err)
+    }
+}
+
+impl From<k::JointError> for Error {
+    fn from(err: k::JointError) -> Error {
+        Error::Joint(err)
+    }
+}
+
+impl fmt::Display for Error {
+    fn fmt(&self, f: &mut fmt::Formatter) -> fmt::Result {
+        match *self {
+            Error::Other(ref msg) => write!(f, "{}", &msg),
+            Error::Collision(ref msg) => write!(f, "collision detected: {}", msg),
+            Error::Io(ref error) => error.fmt(f),
+            Error::Urdf(ref error) => error.fmt(f),
+            Error::Ik(ref error) => error.fmt(f),
+            Error::Joint(ref error) => error.fmt(f),
+        }
+    }
+}
+
+impl ::std::error::Error for Error {
+    fn description(&self) -> &str {
+        match *self {
+            Error::Other(ref msg) => msg.as_ref(),
+            Error::Collision(ref msg) => msg.as_ref(),
+            Error::Io(ref error) => error.description(),
+            Error::Urdf(ref error) => error.description(),
+            Error::Ik(ref error) => error.description(),
+            Error::Joint(ref error) => error.description(),
+        }
     }
 }
