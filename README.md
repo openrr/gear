@@ -13,7 +13,7 @@ use ncollide::shape::{Compound3, Cuboid, ShapeHandle3};
 
 fn main() {
     // Create path planner with loading urdf file and set end link name
-    let planner = gear::build_from_urdf_file_and_end_link_name("sample.urdf", "l_wrist2")
+    let planner = gear::get_joint_path_planner_builder_from_urdf("sample.urdf", "l_wrist2")
         .unwrap()
         .collision_check_margin(0.01)
         .finalize();
@@ -69,8 +69,8 @@ then,
 
 * Up/Down/Left/Right/`f`/`b` to move IK target
 * type `g` to move the end of the arm to the target
-* type `i` to reach the target
 
+* type `i` to just solve inverse kinematics for the target
 * type `r` to set random pose
 * type `c` to check collision
 
