@@ -15,10 +15,13 @@ limitations under the License.
 */
 use k;
 use ncollide::shape::Compound3;
+use na;
 use std;
 use rrt;
 use std::path::Path;
 use urdf_rs;
+
+use k::JointContainer;
 
 use collision_checker::*;
 use errors::*;
@@ -76,17 +79,6 @@ where
     pub fn is_feasible(&mut self, joint_angles: &[f64], objects: &Compound3<f64>) -> bool {
         self.set_joint_angles(joint_angles).unwrap();
         !self.has_any_colliding(objects)
-    }
-    /// Set the joint angles of `self.moving_arm`
-    pub fn set_joint_angles(
-        &mut self,
-        joint_angles: &[f64],
-    ) -> std::result::Result<(), k::JointError> {
-        self.moving_arm.set_joint_angles(joint_angles)
-    }
-    /// Get the joint angles of `self.moving_arm`
-    pub fn get_joint_angles(&self) -> Vec<f64> {
-        self.moving_arm.get_joint_angles()
     }
     /// Check if there are any colliding links
     pub fn has_any_colliding(&self, objects: &Compound3<f64>) -> bool {
@@ -164,6 +156,43 @@ where
     }
 }
 
+impl<K, R> k::JointContainer<f64> for JointPathPlanner<K, R>
+where
+    K: k::JointContainer<f64>,
+    R: k::LinkContainer<f64>,
+{
+    /// Set the joint angles of `self.moving_arm`
+    fn set_joint_angles(&mut self, joint_angles: &[f64]) -> std::result::Result<(), k::JointError> {
+        self.moving_arm.set_joint_angles(joint_angles)
+    }
+    /// Get the joint angles of `self.moving_arm`
+    fn get_joint_angles(&self) -> Vec<f64> {
+        self.moving_arm.get_joint_angles()
+    }
+    fn get_joint_limits(&self) -> Vec<Option<k::Range<f64>>> {
+        self.moving_arm.get_joint_limits()
+    }
+    fn get_joint_names(&self) -> Vec<String> {
+        self.moving_arm.get_joint_names()
+    }
+}
+
+impl<K, R> k::LinkContainer<f64> for JointPathPlanner<K, R>
+where
+    K: k::JointContainer<f64>,
+    R: k::LinkContainer<f64>,
+{
+    /// Calculate the transforms of all of the links
+    fn calc_link_transforms(&self) -> Vec<na::Isometry3<f64>> {
+        self.collision_check_robot.calc_link_transforms()
+    }
+
+    /// Get the names of the links
+    fn get_link_names(&self) -> Vec<String> {
+        self.collision_check_robot.get_link_names()
+    }
+}
+
 /// Builder pattern to create `JointPathPlanner`
 pub struct JointPathPlannerBuilder<K, R>
 where
@@ -235,7 +264,7 @@ where
 }
 
 
-pub fn build_from_urdf_file_and_end_link_name<P>(
+pub fn get_joint_path_planner_builder_from_urdf<P>(
     file_path: P,
     end_link_name: &str,
 ) -> Result<JointPathPlannerBuilder<k::RcKinematicChain<f64>, k::LinkTree<f64>>>

@@ -22,7 +22,7 @@ use ncollide::shape::{Compound3, Cuboid, ShapeHandle3};
 
 fn main() {
     // Create path planner with loading urdf file and set end link name
-    let planner = gear::build_from_urdf_file_and_end_link_name("sample.urdf", "l_wrist2")
+    let planner = gear::get_joint_path_planner_builder_from_urdf("sample.urdf", "l_wrist2")
         .unwrap()
         .collision_check_margin(0.01)
         .finalize();

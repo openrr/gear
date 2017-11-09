@@ -16,8 +16,10 @@ limitations under the License.
 use k;
 use na;
 use std;
-
 use ncollide::shape::Compound3;
+use urdf_rs;
+
+use k::JointContainer;
 
 use errors::*;
 use path_planner::*;
@@ -43,22 +45,17 @@ where
             ik_solver,
         }
     }
-    /// Set the joint angles of `self.path_planner`
-    pub fn set_joint_angles(
-        &mut self,
-        joint_angles: &[f64],
-    ) -> std::result::Result<(), k::JointError> {
-        self.path_planner.set_joint_angles(joint_angles)
-    }
-    /// Get the joint angles of `self.path_planner`
-    pub fn get_joint_angles(&self) -> Vec<f64> {
-        self.path_planner.get_joint_angles()
+    pub fn urdf_robot(&self) -> &Option<urdf_rs::Robot> {
+        &self.path_planner.urdf_robot
     }
     pub fn solve_ik(&mut self, target_pose: &na::Isometry3<f64>) -> Result<f64> {
         Ok(self.ik_solver.solve(
             &mut self.path_planner.moving_arm,
             target_pose,
         )?)
+    }
+    pub fn get_colliding_link_names(&self, objects: &Compound3<f64>) -> Vec<String> {
+        self.path_planner.get_colliding_link_names(objects)
     }
     pub fn plan_with_ik(
         &mut self,
@@ -83,45 +80,35 @@ where
     }
 }
 
-/*
-pub struct JointPathPlannerWithRandomIKBuilder {
-    path_planner_builder: JointPathPlannerBuilder<k::RcKinematicChain<f64>, k::LinkTree<f64>>,
-    pub step_length: f64,
-    pub max_try: usize,
-    pub num_smoothing: usize,
-    pub collision_check_margin: Option<f64>,
-}
-
-impl JointPathPlannerWithRandomIKBuilder {
-    pub fn new<P>(file_path: P, end_link_name: &str) -> Self
-    where
-        P: AsRef<std::path::Path>,
-    {
-        Self {
-            // todo fix unwrap
-            path_planner_builder: 
-        })
+impl<K> k::JointContainer<f64> for JointPathPlannerWithIK<K>
+where
+    K: k::InverseKinematicsSolver<f64>,
+{
+    fn set_joint_angles(&mut self, joint_angles: &[f64]) -> std::result::Result<(), k::JointError> {
+        self.path_planner.set_joint_angles(joint_angles)
     }
-    pub fn finalize(mut self) -> JointPathPlannerWithRandomIK {
-        let ik_solver = k::JacobianIKSolverBuilder::<f64>::new().finalize;
-        build_from_urdf_file_and_end_link_name(file_path, end_link_name)?,
-
+    fn get_joint_angles(&self) -> Vec<f64> {
+        self.path_planner.get_joint_angles()
     }
-    pub fn collision_check_margin(mut self, length: f64) -> Self {
-        self.collision_check_margin = Some(length);
-        self
+    fn get_joint_limits(&self) -> Vec<Option<k::Range<f64>>> {
+        self.path_planner.get_joint_limits()
     }
-    pub fn step_length(mut self, step_length: f64) -> Self {
-        self.step_length = step_length;
-        self
-    }
-    pub fn max_try(mut self, max_try: usize) -> Self {
-        self.max_try = max_try;
-        self
-    }
-    pub fn num_smoothing(mut self, num_smoothing: usize) -> Self {
-        self.num_smoothing = num_smoothing;
-        self
+    fn get_joint_names(&self) -> Vec<String> {
+        self.path_planner.get_joint_names()
     }
 }
-*/
+
+impl<K> k::LinkContainer<f64> for JointPathPlannerWithIK<K>
+where
+    K: k::InverseKinematicsSolver<f64>,
+{
+    /// Calculate the transforms of all of the links
+    fn calc_link_transforms(&self) -> Vec<na::Isometry3<f64>> {
+        self.path_planner.calc_link_transforms()
+    }
+
+    /// Get the names of the links
+    fn get_link_names(&self) -> Vec<String> {
+        self.path_planner.get_link_names()
+    }
+}

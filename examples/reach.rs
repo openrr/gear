@@ -21,6 +21,7 @@ extern crate nalgebra as na;
 extern crate ncollide;
 extern crate urdf_viz;
 
+use k::JointContainer;
 use glfw::{Action, Key, WindowEvent};
 use ncollide::shape::{Compound3, Cuboid3, ShapeHandle3};
 
@@ -63,7 +64,7 @@ where
 {
     fn new(planner: gear::JointPathPlannerWithIK<I>) -> Self {
         let mut viewer = urdf_viz::Viewer::new();
-        viewer.setup(planner.path_planner.urdf_robot.as_ref().unwrap());
+        viewer.setup(planner.urdf_robot().as_ref().unwrap());
         viewer.add_axis_cylinders("origin", 1.0);
 
         let obstacle_shape1 = ShapeHandle3::new(Cuboid3::new(na::Vector3::new(0.20, 0.4, 0.1)));
@@ -106,9 +107,7 @@ where
         }
     }
     fn update_robot(&mut self) {
-        self.viewer.update(
-            &self.planner.path_planner.collision_check_robot,
-        );
+        self.viewer.update(&self.planner);
     }
     fn update_ik_target(&mut self) {
         if let Some(obj) = self.viewer.scenes.get_mut("ik_target") {
@@ -192,16 +191,12 @@ where
                             }
                             Key::R => {
                                 self.reset_colliding_link_colors();
-                                gear::set_random_joint_angles(
-                                    &mut self.planner.path_planner.moving_arm,
-                                ).unwrap();
+                                gear::set_random_joint_angles(&mut self.planner).unwrap();
                                 self.update_robot();
                             }
                             Key::C => {
                                 self.colliding_link_names =
-                                    self.planner.path_planner.get_colliding_link_names(
-                                        &self.target_objects,
-                                    );
+                                    self.planner.get_colliding_link_names(&self.target_objects);
                                 for name in &self.colliding_link_names {
                                     println!("{}", name);
                                     self.viewer.set_temporal_color(name, 0.8, 0.8, 0.6);
@@ -223,7 +218,7 @@ fn main() {
     env_logger::init().unwrap();
     let input_string = env::args().nth(1).unwrap_or("sample.urdf".to_owned());
     let input_end_link = env::args().nth(2).unwrap_or("l_wrist2".to_owned());
-    let planner = gear::build_from_urdf_file_and_end_link_name(&input_string, &input_end_link)
+    let planner = gear::get_joint_path_planner_builder_from_urdf(&input_string, &input_end_link)
         .unwrap()
         .collision_check_margin(0.01)
         .finalize();
@@ -234,6 +229,7 @@ fn main() {
         .jacobian_move_epsilon(0.001)
         .finalize();
     let solver = gear::RandomInitializeIKSolver::new(solver, 100);
-    let mut app = CollisionAvoidApp::new(gear::JointPathPlannerWithIK::new(planner, solver));
+    let planner = gear::JointPathPlannerWithIK::new(planner, solver);
+    let mut app = CollisionAvoidApp::new(planner);
     app.run();
 }
