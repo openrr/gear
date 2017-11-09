@@ -72,6 +72,8 @@ where
             modify_to_nearest_angle(&initial_angles, &mut new_angles, &limits);
             arm.set_joint_angles(&new_angles)?;
         }
+// failed
+        arm.set_joint_angles(&initial_angles)?;
         result
     }
 }
