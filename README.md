@@ -6,79 +6,57 @@ Collision Avoidance Path Planning for robotics in Rust-lang
 
 ```rust
 extern crate gear;
-extern crate k;
 extern crate nalgebra as na;
 extern crate ncollide;
-extern crate urdf_rs;
 
-use ncollide::shape::{Compound, Cuboid, ShapeHandle};
-use k::InverseKinematicsSolver;
-use test::Bencher;
-use std::path::Path;
+use ncollide::shape::{Compound3, Cuboid, ShapeHandle3};
 
-// Load urdf file
-let input_path = Path::new("sample.urdf");
-let urdf_robot = urdf_rs::utils::read_urdf_or_xacro(input_path).unwrap();
+fn main() {
+    // Create path planner with loading urdf file and set end link name
+    let planner = gear::build_from_urdf_file_and_end_link_name("sample.urdf", "l_wrist2")
+        .unwrap()
+        .collision_check_margin(0.01)
+        .finalize();
+    // Create inverse kinematics solver
+    let solver = gear::JacobianIKSolverBuilder::<f64>::new()
+        .num_max_try(1000)
+        .allowable_target_distance(0.01)
+        .move_epsilon(0.00001)
+        .jacobian_move_epsilon(0.001)
+        .finalize();
+    let solver = gear::RandomInitializeIKSolver::new(solver, 100);
+    // Create path planner with IK solver
+    let mut planner = gear::JointPathPlannerWithIK::new(planner, solver);
 
-// Create collision checker
-let checker_for_planner =
-    gear::CollisionChecker::<f64>::from_urdf_robot(&urdf_robot, 0.01);
-// Create kinematic robot model
-let robot_for_planner = k::urdf::create_tree::<f64>(&urdf_robot);
+    // Create obstacles
+    let obstacle_shape1 = ShapeHandle3::new(Cuboid::new(na::Vector3::new(0.20, 0.4, 0.1)));
+    let obstacle_pose1 = na::Isometry3::new(na::Vector3::new(0.7, 0.0, 0.1), na::zero());
 
-// Create arm object from kinematic robot model for inverse kinematics
-let mut arms = k::create_kinematic_chains_with_dof_limit(&robot_for_planner, 7);
+    let obstacle_shape2 = ShapeHandle3::new(Cuboid::new(na::Vector3::new(0.20, 0.3, 0.1)));
+    let obstacle_pose2 = na::Isometry3::new(na::Vector3::new(0.7, 0.0, 0.6), na::zero());
 
-// Create motion planner
-let mut planner = gear::JointPathPlannerBuilder::new(
-    arms.pop().expect("no arms found"),
-    robot_for_planner,
-    checker_for_planner,
-).max_try(5000)
-    .finalize();
+    let target_objects = Compound3::new(vec![
+        (obstacle_pose1, obstacle_shape1),
+        (obstacle_pose2, obstacle_shape2),
+    ]);
 
-// Create obstacles
-let obstacle_shape1 = Cuboid::new(na::Vector3::new(0.20, 0.4, 0.1));
-let obstacle_pose1 = na::Isometry3::new(na::Vector3::new(0.7, 0.0, 0.1), na::zero());
-
-let obstacle_shape2 = Cuboid::new(na::Vector3::new(0.20, 0.3, 0.1));
-let obstacle_pose2 = na::Isometry3::new(na::Vector3::new(0.7, 0.0, 0.6), na::zero());
-
-let mut shapes = Vec::new();
-let handle1 = ShapeHandle::new(obstacle_shape1);
-shapes.push((obstacle_pose1, handle1));
-let handle2 = ShapeHandle::new(obstacle_shape2);
-shapes.push((obstacle_pose2, handle2));
-let target_objects = Compound::new(shapes);
-
-// Create IK solver
-let solver = k::JacobianIKSolverBuilder::<f64>::new()
-    .num_max_try(1000)
-    .allowable_target_distance(0.01)
-    .move_epsilon(0.00001)
-    .jacobian_move_epsilon(0.001)
-    .finalize();
-let solver = gear::RandomInitializeIKSolver::new(solver, 100);
-
-// Store initial joint angles for planning
-let initial = planner.get_joint_angles();
-
-// Set IK target transformation
-let mut ik_target_pose = na::Isometry3::from_parts(
-    na::Translation3::new(0.40, 0.20, 0.3),
-    na::UnitQuaternion::from_euler_angles(0.0, -0.1, 0.0),
-);    
-
-// Solve IK, this will update kinematic robot model
-solver
-    .solve(&mut planner.moving_arm, &ik_target_pose)
-    .unwrap();
-// Store the joint angles as a goal
-let goal1 = planner.get_joint_angles();
-
-// Plan the path
-let plan1 = planner.plan(&initial, &goal1, &target_objects).unwrap();
-println!("{:?}", plan1);
+    // Set IK target transformation
+    let mut ik_target_pose = na::Isometry3::from_parts(
+        na::Translation3::new(0.40, 0.20, 0.3),
+        na::UnitQuaternion::from_euler_angles(0.0, -0.1, 0.0),
+    );
+    // Plan the path
+    let plan1 = planner
+        .plan_with_ik(&ik_target_pose, &target_objects)
+        .unwrap();
+    println!("plan1 = {:?}", plan1);
+    ik_target_pose.translation.vector[2] += 0.50;
+    // move again
+    let plan2 = planner
+        .plan_with_ik(&ik_target_pose, &target_objects)
+        .unwrap();
+    println!("plan2 = {:?}", plan2);
+}
 ```
 
 ## Run example with GUI
