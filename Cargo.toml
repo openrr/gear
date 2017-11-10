@@ -15,7 +15,7 @@ default = ["use-assimp"]
 use-assimp = ["urdf-viz/assimp", "assimp"]
 
 [dependencies]
-k = "0.4.0"
+k = "0.5.0"
 log = "0.3.8"
 nalgebra = "0.13.0"
 ncollide = "0.13.0"

@@ -263,23 +263,48 @@ where
     }
 }
 
-
-pub fn get_joint_path_planner_builder_from_urdf<P>(
-    file_path: P,
-    end_link_name: &str,
-) -> Result<JointPathPlannerBuilder<k::RcKinematicChain<f64>, k::LinkTree<f64>>>
+impl<J, L> JointPathPlannerBuilder<J, L>
 where
-    P: AsRef<Path>,
+    J: k::KinematicChain<f64>,
+    L: k::CreateChain<J, f64>
+        + k::urdf::FromUrdf
+        + k::LinkContainer<f64>,
 {
-    let urdf_robot = urdf_rs::utils::read_urdf_or_xacro(file_path.as_ref())?;
+    pub fn try_from_urdf_file<P>(
+        file: P,
+        end_link_name: &str,
+    ) -> Result<JointPathPlannerBuilder<J, L>>
+    where
+        P: AsRef<Path>,
+    {
+        let robot = urdf_rs::utils::read_urdf_or_xacro(file.as_ref())?;
+        get_joint_path_planner_builder_from_urdf(robot, end_link_name)
+    }
+
+    pub fn try_from_urdf_robot<P>(
+        robot: urdf_rs::Robot,
+        end_link_name: &str,
+    ) -> Result<JointPathPlannerBuilder<J, L>> {
+        get_joint_path_planner_builder_from_urdf(robot, end_link_name)
+    }
+}
+
+fn get_joint_path_planner_builder_from_urdf<J, L>(
+    urdf_robot: urdf_rs::Robot,
+    end_link_name: &str,
+) -> Result<JointPathPlannerBuilder<J, L>>
+where
+    J: k::KinematicChain<f64>,
+    L: k::CreateChain<J, f64> + k::urdf::FromUrdf + k::LinkContainer<f64>,
+{
     const DEFAULT_MARGIN: f64 = 0.0;
-    let collision_checker = CollisionChecker::<f64>::from_urdf_robot(&urdf_robot, DEFAULT_MARGIN);
-    let collision_check_robot = k::urdf::create_tree::<f64>(&urdf_robot);
+    let collision_checker = CollisionChecker::from_urdf_robot(&urdf_robot, DEFAULT_MARGIN);
+    let collision_check_robot = L::from(&urdf_robot);
     let moving_arm = collision_check_robot
-        .iter()
-        .find(|&ljn_ref| ljn_ref.borrow().data.name == end_link_name)
-        .and_then(|ljn| Some(k::RcKinematicChain::new(end_link_name, ljn)))
-        .ok_or(Error::Other(format!("{} not found", end_link_name)))?;
+        .chain_from_end_link_name(end_link_name)
+        .ok_or(Error::Other(
+            format!("end link `{}` not found", end_link_name),
+        ))?;
 
     Ok(JointPathPlannerBuilder {
         moving_arm,
@@ -347,8 +372,10 @@ mod tests {
     }
     #[test]
     fn from_urdf() {
-        let _ = get_joint_path_planner_builder_from_urdf("sample.urdf", "l_wrist2")
-            .unwrap()
+        let _planner = JointPathPlannerBuilder::<k::RcKinematicChain<f64>, k::LinkTree<f64>>::try_from_urdf_file(
+            "sample.urdf",
+            "l_wrist2",
+        ).unwrap()
             .collision_check_margin(0.01)
             .finalize();
     }

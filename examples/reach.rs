@@ -218,7 +218,7 @@ fn main() {
     env_logger::init().unwrap();
     let input_string = env::args().nth(1).unwrap_or("sample.urdf".to_owned());
     let input_end_link = env::args().nth(2).unwrap_or("l_wrist2".to_owned());
-    let planner = gear::get_joint_path_planner_builder_from_urdf(&input_string, &input_end_link)
+    let planner = gear::JointPathPlannerBuilder::try_from_urdf_file(&input_string, &input_end_link)
         .unwrap()
         .collision_check_margin(0.01)
         .finalize();
