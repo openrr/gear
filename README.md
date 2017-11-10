@@ -61,11 +61,13 @@ fn main() {
 
 ## Run example with GUI
 
+### How to run
+
 ```bash
 cargo run --release --example reach
 ```
 
-then,
+### GUI control
 
 * Up/Down/Left/Right/`f`/`b` to move IK target
 * type `g` to move the end of the arm to the target
@@ -74,11 +76,19 @@ then,
 * type `r` to set random pose
 * type `c` to check collision
 
+### Use your robot
 
-The example can handle any urdf files (sample.urdf is used as default)
+The example can handle any urdf files (sample.urdf is used as default).
+It requires the name of the target end link name.
 
 ```bash
-cargo run --release --example reach YOUR_URDF_FILE_PATH
+cargo run --release --example reach YOUR_URDF_FILE_PATH END_LINK_NAME
 ```
 
-[![Video](http://img.youtube.com/vi/fYfZR1f2HW0/0.jpg)](http://www.youtube.com/watch?v=fYfZR1f2HW0)
+For example, you can use PR2.
+
+```bash
+cargo run --release --example reach $(rospack find pr2_description)/robots/pr2.urdf.xacro l_gripper_palm_link
+```
+
+[![Video](https://j.gifs.com/kZZyJK.gif)](http://www.youtube.com/watch?v=jEu3EfpVAI8)
