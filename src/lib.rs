@@ -15,6 +15,9 @@ limitations under the License.
 */
 //! # Motion Planning Library for Robotics
 //!
+//! Get the collision free trajectory of joint angles. `ncollide` is used to check the
+//! collision between the robot and the environment.
+//!
 //! # Example
 //!
 //! ```

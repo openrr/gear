@@ -24,11 +24,16 @@ use k::JointContainer;
 use errors::*;
 use path_planner::*;
 
+/// Joint path planner which supports inverse kinematics
 pub struct JointPathPlannerWithIK<K>
 where
     K: k::InverseKinematicsSolver<f64>,
 {
+    /// Joint Path Planner to be used to find collision free path
+    ///
+    /// Currently, `JointPathPlanner<k::RcKinematicChain<f64>, k::LinkTree<f64>>` is used.
     pub path_planner: JointPathPlanner<k::RcKinematicChain<f64>, k::LinkTree<f64>>,
+    /// Inverse kinematics solver to find the goal joint angles
     pub ik_solver: K,
 }
 
@@ -36,6 +41,26 @@ impl<K> JointPathPlannerWithIK<K>
 where
     K: k::InverseKinematicsSolver<f64>,
 {
+    /// Create instance from `JointPathPlannerBuilder` and `InverseKinematicsSolver`
+    ///
+    /// # Example
+    ///
+    /// ```
+    /// // Create path planner with loading urdf file and set end link name
+    /// let planner = gear::JointPathPlannerBuilder::try_from_urdf_file("sample.urdf", "l_wrist2")
+    ///     .unwrap()
+    ///     .collision_check_margin(0.01)
+    ///     .finalize();
+    /// // Create inverse kinematics solver
+    /// let solver = gear::JacobianIKSolverBuilder::<f64>::new()
+    ///     .num_max_try(1000)
+    ///     .allowable_target_distance(0.01)
+    ///     .move_epsilon(0.00001)
+    ///     .jacobian_move_epsilon(0.001)
+    ///     .finalize();
+    /// // Create path planner with IK solver
+    /// let _planner = gear::JointPathPlannerWithIK::new(planner, solver);
+    /// ```
     pub fn new(
         path_planner: JointPathPlanner<k::RcKinematicChain<f64>, k::LinkTree<f64>>,
         ik_solver: K,

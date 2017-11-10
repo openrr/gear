@@ -111,9 +111,11 @@ where
     /// Plan the sequence of joint angles of `self.moving_arm`
     ///
     /// # Arguments
+    ///
+    /// - start_angles: initial joint angles of `self.moving_arm`.
     /// - goal_angles: goal joint angles of `self.moving_arm`.
-    /// start is `self.moving_arm.get_joint_angles()`. set it by
-    /// `set_joint_angles()`.
+    /// - objects: The collision between `self.collision_check_robot` and `objects`
+    ///   will be checked.
     pub fn plan(
         &mut self,
         start_angles: &[f64],
@@ -199,14 +201,14 @@ where
     K: k::JointContainer<f64>,
     R: k::LinkContainer<f64>,
 {
-    pub moving_arm: K,
-    pub collision_check_robot: R,
-    pub collision_checker: CollisionChecker<f64>,
-    pub step_length: f64,
-    pub max_try: usize,
-    pub num_smoothing: usize,
-    pub collision_check_margin: Option<f64>,
-    pub urdf_robot: Option<urdf_rs::Robot>,
+    moving_arm: K,
+    collision_check_robot: R,
+    collision_checker: CollisionChecker<f64>,
+    step_length: f64,
+    max_try: usize,
+    num_smoothing: usize,
+    collision_check_margin: Option<f64>,
+    urdf_robot: Option<urdf_rs::Robot>,
 }
 
 impl<K, R> JointPathPlannerBuilder<K, R>
@@ -214,6 +216,9 @@ where
     K: k::JointContainer<f64>,
     R: k::LinkContainer<f64>,
 {
+    /// Create from components
+    ///
+    /// There are also some utility functions to create from urdf
     pub fn new(
         moving_arm: K,
         collision_check_robot: R,
@@ -270,6 +275,7 @@ where
         + k::urdf::FromUrdf
         + k::LinkContainer<f64>,
 {
+    /// Try to create `JointPathPlannerBuilder` instance from URDF file and end link name
     pub fn try_from_urdf_file<P>(
         file: P,
         end_link_name: &str,
@@ -280,7 +286,7 @@ where
         let robot = urdf_rs::utils::read_urdf_or_xacro(file.as_ref())?;
         get_joint_path_planner_builder_from_urdf(robot, end_link_name)
     }
-
+    /// Try to create `JointPathPlannerBuilder` instance from `urdf_rs::Robot` instance
     pub fn try_from_urdf_robot<P>(
         robot: urdf_rs::Robot,
         end_link_name: &str,
