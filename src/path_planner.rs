@@ -77,7 +77,9 @@ where
     }
     /// Check if the joint_angles are OK
     pub fn is_feasible(&mut self, joint_angles: &[f64], objects: &Compound3<f64>) -> bool {
-        self.set_joint_angles(joint_angles).unwrap();
+        if self.set_joint_angles(joint_angles).is_err() {
+            return false;
+        }
         !self.has_any_colliding(objects)
     }
     /// Check if there are any colliding links
