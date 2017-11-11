@@ -2,7 +2,6 @@
 
 Collision Avoidance Path Planning for robotics in Rust-lang
 
-
 [![Video](https://j.gifs.com/kZZyJK.gif)](http://www.youtube.com/watch?v=jEu3EfpVAI8)
 
 ## Code example
@@ -82,7 +81,6 @@ For example,
 cargo run --release --example reach $(rospack find pr2_description)/robots/pr2.urdf.xacro l_gripper_palm_link
 ```
 
-
 [![Video](https://j.gifs.com/kZZyJK.gif)](http://www.youtube.com/watch?v=jEu3EfpVAI8)
 
 #### Universal Robot: UR10
@@ -91,7 +89,7 @@ cargo run --release --example reach $(rospack find pr2_description)/robots/pr2.u
 cargo run --release --example reach $(rospack find ur_description)/urdf/ur10_robot.urdf.xacro ee_link
 ```
 
-[![sawyer movie](https://j.gifs.com/G55yxL.gif)](https://www.youtube.com/watch?v=0YujRKUto-4)
+[![Sawyer movie](https://j.gifs.com/ZVVqDw.gif)](https://www.youtube.com/watch?v=0YujRKUto-4)
 
 #### Sawyer
 
@@ -99,4 +97,4 @@ cargo run --release --example reach $(rospack find ur_description)/urdf/ur10_rob
 cargo run --release --example reach $(rospack find sawyer_description)/urdf/sawyer.urdf right_hand
 ```
 
-[![UR5 movie](https://j.gifs.com/ZVVqDw.gif)](https://www.youtube.com/watch?v=0YujRKUto-4)
+[![UR5 movie](https://j.gifs.com/G55yxL.gif)](https://www.youtube.com/watch?v=0YujRKUto-4)
