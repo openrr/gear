@@ -93,30 +93,60 @@ where
 
             for event in self.viewer.events().iter() {
                 match event.value {
-                    WindowEvent::Key(code, _, Action::Press, _) => {
+                    WindowEvent::Key(code, _, Action::Press, mods) => {
                         match code {
                             Key::Up => {
-                                self.ik_target_pose.translation.vector[2] += 0.05;
+                                if mods.contains(glfw::modifiers::Shift) {
+                                    self.ik_target_pose.rotation *=
+                                        na::UnitQuaternion::from_euler_angles(0.0, 0.0, 0.2);
+                                } else {
+                                    self.ik_target_pose.translation.vector[2] += 0.05;
+                                }
                                 self.update_ik_target();
                             }
                             Key::Down => {
-                                self.ik_target_pose.translation.vector[2] -= 0.05;
+                                if mods.contains(glfw::modifiers::Shift) {
+                                    self.ik_target_pose.rotation *=
+                                        na::UnitQuaternion::from_euler_angles(0.0, 0.0, -0.2);
+                                } else {
+                                    self.ik_target_pose.translation.vector[2] -= 0.05;
+                                }
                                 self.update_ik_target();
                             }
                             Key::Left => {
-                                self.ik_target_pose.translation.vector[1] += 0.05;
+                                if mods.contains(glfw::modifiers::Shift) {
+                                    self.ik_target_pose.rotation *=
+                                        na::UnitQuaternion::from_euler_angles(0.0, 0.2, -0.0);
+                                } else {
+                                    self.ik_target_pose.translation.vector[1] += 0.05;
+                                }
                                 self.update_ik_target();
                             }
                             Key::Right => {
-                                self.ik_target_pose.translation.vector[1] -= 0.05;
+                                if mods.contains(glfw::modifiers::Shift) {
+                                    self.ik_target_pose.rotation *=
+                                        na::UnitQuaternion::from_euler_angles(0.0, -0.2, 0.0);
+                                } else {
+                                    self.ik_target_pose.translation.vector[1] -= 0.05;
+                                }
                                 self.update_ik_target();
                             }
                             Key::B => {
-                                self.ik_target_pose.translation.vector[0] -= 0.05;
+                                if mods.contains(glfw::modifiers::Shift) {
+                                    self.ik_target_pose.rotation *=
+                                        na::UnitQuaternion::from_euler_angles(-0.2, 0.0, 0.0);
+                                } else {
+                                    self.ik_target_pose.translation.vector[0] -= 0.05;
+                                }
                                 self.update_ik_target();
                             }
                             Key::F => {
-                                self.ik_target_pose.translation.vector[0] += 0.05;
+                                if mods.contains(glfw::modifiers::Shift) {
+                                    self.ik_target_pose.rotation *=
+                                        na::UnitQuaternion::from_euler_angles(0.2, 0.0, 0.0);
+                                } else {
+                                    self.ik_target_pose.translation.vector[0] += 0.05;
+                                }
                                 self.update_ik_target();
                             }
                             Key::I => {
