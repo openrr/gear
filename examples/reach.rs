@@ -31,7 +31,7 @@ where
     I: gear::InverseKinematicsSolver<f64>,
 {
     planner: gear::JointPathPlannerWithIK<I>,
-    target_objects: Compound3<f64>,
+    obstacles: Compound3<f64>,
     ik_target_pose: na::Isometry3<f64>,
     colliding_link_names: Vec<String>,
     viewer: urdf_viz::Viewer,
@@ -46,10 +46,9 @@ where
         viewer.setup(planner.urdf_robot().as_ref().unwrap());
         viewer.add_axis_cylinders("origin", 1.0);
 
-        let path = std::path::Path::new("obstacles.urdf");
-        let urdf_obstacles =
-            urdf_rs::utils::read_urdf_or_xacro(path).expect("obstacle file not found");
-        let target_objects = gear::create_compound_from_urdf_robot(&urdf_obstacles);
+        let urdf_obstacles = urdf_rs::utils::read_urdf_or_xacro("obstacles.urdf")
+            .expect("obstacle file not found");
+        let obstacles = gear::create_compound_from_urdf_robot(&urdf_obstacles);
         viewer.setup(&urdf_obstacles);
 
         let ik_target_pose = na::Isometry3::from_parts(
@@ -59,7 +58,7 @@ where
         viewer.add_axis_cylinders("ik_target", 0.3);
         CollisionAvoidApp {
             viewer,
-            target_objects,
+            obstacles,
             ik_target_pose,
             colliding_link_names: Vec::new(),
             planner,
@@ -133,7 +132,7 @@ where
                                 self.reset_colliding_link_colors();
                                 match self.planner.plan_with_ik(
                                     &self.ik_target_pose,
-                                    &self.target_objects,
+                                    &self.obstacles,
                                 ) {
                                     Ok(mut plan) => {
                                         plan.reverse();
@@ -155,7 +154,7 @@ where
                             }
                             Key::C => {
                                 self.colliding_link_names =
-                                    self.planner.get_colliding_link_names(&self.target_objects);
+                                    self.planner.get_colliding_link_names(&self.obstacles);
                                 for name in &self.colliding_link_names {
                                     println!("{}", name);
                                     self.viewer.set_temporal_color(name, 0.8, 0.8, 0.6);
