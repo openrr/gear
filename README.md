@@ -74,8 +74,29 @@ It requires the name of the target end link name.
 cargo run --release --example reach YOUR_URDF_FILE_PATH END_LINK_NAME
 ```
 
-For example, you can use PR2.
+For example,
+
+#### PR2
 
 ```bash
 cargo run --release --example reach $(rospack find pr2_description)/robots/pr2.urdf.xacro l_gripper_palm_link
 ```
+
+
+[![Video](https://j.gifs.com/kZZyJK.gif)](http://www.youtube.com/watch?v=jEu3EfpVAI8)
+
+#### Universal Robot: UR10
+
+```bash
+cargo run --release --example reach $(rospack find ur_description)/urdf/ur10_robot.urdf.xacro ee_link
+```
+
+[![sawyer movie](https://j.gifs.com/G55yxL.gif)](https://www.youtube.com/watch?v=0YujRKUto-4)
+
+#### Sawyer
+
+```bash
+cargo run --release --example reach $(rospack find sawyer_description)/urdf/sawyer.urdf right_hand
+```
+
+[![UR5 movie](https://j.gifs.com/ZVVqDw.gif)](https://www.youtube.com/watch?v=0YujRKUto-4)
