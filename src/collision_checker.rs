@@ -30,18 +30,14 @@ fn from_urdf_pose<T>(pose: &urdf_rs::Pose) -> Isometry3<T>
 where
     T: Real,
 {
-    Isometry3::from_parts(
-        Translation3::new(
-            na::convert(pose.xyz[0]),
-            na::convert(pose.xyz[1]),
-            na::convert(pose.xyz[2]),
-        ),
+    na::convert(Isometry3::from_parts(
+        Translation3::new(pose.xyz[0], pose.xyz[1], pose.xyz[2]),
         UnitQuaternion::from_euler_angles(
-            na::convert(pose.rpy[0]),
-            na::convert(pose.rpy[1]),
-            na::convert(pose.rpy[2]),
+            pose.rpy[0],
+            pose.rpy[1],
+            pose.rpy[2],
         ),
-    )
+    ))
 }
 
 #[cfg(feature = "assimp")]
