@@ -308,11 +308,14 @@ where
     const DEFAULT_MARGIN: f64 = 0.0;
     let collision_checker = CollisionChecker::from_urdf_robot(&urdf_robot, DEFAULT_MARGIN);
     let collision_check_robot = L::from(&urdf_robot);
+    let candidates = collision_check_robot.get_link_names();
     let moving_arm = collision_check_robot
         .chain_from_end_link_name(end_link_name)
-        .ok_or(Error::Other(
-            format!("end link `{}` not found", end_link_name),
-        ))?;
+        .ok_or(Error::Other(format!(
+            "end link `{}` not found: candidates = {:?}",
+            end_link_name,
+            candidates
+        )))?;
 
     Ok(JointPathPlannerBuilder {
         moving_arm,
