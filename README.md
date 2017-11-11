@@ -59,7 +59,8 @@ cargo run --release --example reach
 
 ### GUI control
 
-* Up/Down/Left/Right/`f`/`b` to move IK target
+* Up/Down/Left/Right/`f`/`b` to translate IK target
+* Shift + Up/Down/Left/Right/`f`/`b` to rotate IK target
 * type `g` to move the end of the arm to the target
 
 * type `i` to just solve inverse kinematics for the target
