@@ -324,6 +324,13 @@ where
     })
 }
 
+pub type DefaultJointPathPlanner<T> = JointPathPlanner<k::RcKinematicChain<T>, k::LinkTree<T>>;
+pub type DefaultJointPathPlannerBuilder<T> = JointPathPlannerBuilder<
+    k::RcKinematicChain<T>,
+    k::LinkTree<T>,
+>;
+
+
 #[cfg(test)]
 mod tests {
     use super::*;
@@ -378,11 +385,10 @@ mod tests {
     }
     #[test]
     fn from_urdf() {
-        let _planner = JointPathPlannerBuilder::<k::RcKinematicChain<f64>, k::LinkTree<f64>>::try_from_urdf_file(
-            "sample.urdf",
-            "l_wrist2",
-        ).unwrap()
-            .collision_check_margin(0.01)
-            .finalize();
+        let _planner =
+            DefaultJointPathPlannerBuilder::try_from_urdf_file("sample.urdf", "l_wrist2")
+                .unwrap()
+                .collision_check_margin(0.01)
+                .finalize();
     }
 }

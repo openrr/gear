@@ -22,7 +22,7 @@ use urdf_rs;
 use k::JointContainer;
 
 use errors::*;
-use path_planner::*;
+use path_planner::DefaultJointPathPlanner;
 
 /// Joint path planner which supports inverse kinematics
 pub struct JointPathPlannerWithIK<K>
@@ -32,7 +32,7 @@ where
     /// Joint Path Planner to be used to find collision free path
     ///
     /// Currently, `JointPathPlanner<k::RcKinematicChain<f64>, k::LinkTree<f64>>` is used.
-    pub path_planner: JointPathPlanner<k::RcKinematicChain<f64>, k::LinkTree<f64>>,
+    pub path_planner: DefaultJointPathPlanner<f64>,
     /// Inverse kinematics solver to find the goal joint angles
     pub ik_solver: K,
 }
@@ -61,10 +61,7 @@ where
     /// // Create path planner with IK solver
     /// let _planner = gear::JointPathPlannerWithIK::new(planner, solver);
     /// ```
-    pub fn new(
-        path_planner: JointPathPlanner<k::RcKinematicChain<f64>, k::LinkTree<f64>>,
-        ik_solver: K,
-    ) -> Self {
+    pub fn new(path_planner: DefaultJointPathPlanner<f64>, ik_solver: K) -> Self {
         Self {
             path_planner,
             ik_solver,
