@@ -4,6 +4,8 @@ Collision Avoidance Path Planning for robotics in Rust-lang
 
 [![Video](https://j.gifs.com/kZZyJK.gif)](http://www.youtube.com/watch?v=jEu3EfpVAI8)
 
+[Documents](https://docs.rs/gear)
+
 ## Code example
 
 ### [minimum code example](examples/minimum.rs)
