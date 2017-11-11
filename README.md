@@ -16,7 +16,7 @@ extern crate nalgebra as na;
 fn main() {
     // Create path planner with loading urdf file and set end link name
     let planner = gear::JointPathPlannerBuilder::try_from_urdf_file("sample.urdf", "l_wrist2")
-        .unwrap()
+        .expect("failed to create planner from urdf file")
         .collision_check_margin(0.01)
         .finalize();
     // Create inverse kinematics solver
@@ -30,7 +30,7 @@ fn main() {
     let mut planner = gear::JointPathPlannerWithIK::new(planner, solver);
 
     // Create obstacles
-    let target_objects =
+    let obstacles =
         gear::create_compound_from_urdf("obstacles.urdf").expect("obstacle file not found");
 
     // Set IK target transformation
@@ -38,16 +38,12 @@ fn main() {
         na::Translation3::new(0.40, 0.20, 0.3),
         na::UnitQuaternion::from_euler_angles(0.0, -0.1, 0.0),
     );
-    // Plan the path
-    let plan1 = planner
-        .plan_with_ik(&ik_target_pose, &target_objects)
-        .unwrap();
+    // Plan the path, path is the vector of joint angles for root to "l_wrist2"
+    let plan1 = planner.plan_with_ik(&ik_target_pose, &obstacles).unwrap();
     println!("plan1 = {:?}", plan1);
     ik_target_pose.translation.vector[2] += 0.50;
-    // move again
-    let plan2 = planner
-        .plan_with_ik(&ik_target_pose, &target_objects)
-        .unwrap();
+    // plan the path from previous result
+    let plan2 = planner.plan_with_ik(&ik_target_pose, &obstacles).unwrap();
     println!("plan2 = {:?}", plan2);
 }
 ```

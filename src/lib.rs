@@ -44,14 +44,14 @@ limitations under the License.
 //!     // Create path planner with IK solver
 //!     let mut planner = gear::JointPathPlannerWithIK::new(planner, solver);
 //!
-//!     // Create obstacles
+//!     // Create obstacles, or use `gear::create_compound_from_urdf("obstacles.urdf")`
 //!     let obstacle_shape1 = ShapeHandle3::new(Cuboid::new(na::Vector3::new(0.20, 0.4, 0.1)));
 //!     let obstacle_pose1 = na::Isometry3::new(na::Vector3::new(0.7, 0.0, 0.1), na::zero());
 //!
 //!     let obstacle_shape2 = ShapeHandle3::new(Cuboid::new(na::Vector3::new(0.20, 0.3, 0.1)));
 //!     let obstacle_pose2 = na::Isometry3::new(na::Vector3::new(0.7, 0.0, 0.6), na::zero());
 //!
-//!     let target_objects = Compound3::new(vec![
+//!     let obstacles = Compound3::new(vec![
 //!         (obstacle_pose1, obstacle_shape1),
 //!         (obstacle_pose2, obstacle_shape2),
 //!     ]);
@@ -61,19 +61,14 @@ limitations under the License.
 //!         na::Translation3::new(0.40, 0.20, 0.3),
 //!         na::UnitQuaternion::from_euler_angles(0.0, -0.1, 0.0),
 //!     );
-//!     // Plan the path
-//!     let plan1 = planner
-//!         .plan_with_ik(&ik_target_pose, &target_objects)
-//!         .unwrap();
+//!     // Plan the path, path is the vector of joint angles for root to "l_wrist2"
+//!     let plan1 = planner.plan_with_ik(&ik_target_pose, &obstacles).unwrap();
 //!     println!("plan1 = {:?}", plan1);
 //!     ik_target_pose.translation.vector[2] += 0.50;
-//!     // move again
-//!     let plan2 = planner
-//!         .plan_with_ik(&ik_target_pose, &target_objects)
-//!         .unwrap();
+//!     // plan the path from previous result
+//!     let plan2 = planner.plan_with_ik(&ik_target_pose, &obstacles).unwrap();
 //!     println!("plan2 = {:?}", plan2);
 //! }
-//! ```
 
 #[cfg(feature = "assimp")]
 extern crate assimp;
