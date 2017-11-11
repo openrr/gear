@@ -19,7 +19,7 @@ use k;
 use na::{self, Isometry3, Real, Translation3, UnitQuaternion, Vector3};
 use ncollide::ncollide_geometry::query::Proximity;
 use ncollide::query;
-use ncollide::shape::{Ball, Cuboid3, Cylinder, Shape3, ShapeHandle3, TriMesh};
+use ncollide::shape::{Ball, Cuboid3, Cylinder, Shape3, ShapeHandle3, TriMesh, Compound3};
 use urdf_rs;
 use std::collections::HashMap;
 use std::path::Path;
@@ -275,4 +275,32 @@ where
         }
         names
     }
+}
+
+/// Create `ncollide::shape::Compound3` from URDF file
+///
+/// The `<link>` elements are used as obstacles. set the origin/geometry of
+/// `<visual>` and `<collision>`. You can skip `<inertia>`.
+pub fn create_compound_from_urdf<P>(file: P) -> Result<Compound3<f64>>
+where
+    P: AsRef<Path>,
+{
+    let urdf_obstacles = urdf_rs::utils::read_urdf_or_xacro(file.as_ref())?;
+    Ok(create_compound_from_urdf_robot(&urdf_obstacles))
+}
+
+/// Create `ncollide::shape::Compound3` from `urdf_rs::Robot`
+pub fn create_compound_from_urdf_robot(urdf_obstacle: &urdf_rs::Robot) -> Compound3<f64> {
+    let compound_data = urdf_obstacle
+        .links
+        .iter()
+        .filter_map(|l| match create_collision_model(
+            &l.collision.geometry,
+            None,
+        ) {
+            Some(col) => Some((from_urdf_pose(&l.collision.origin), col)),
+            None => None,
+        })
+        .collect();
+    Compound3::new(compound_data)
 }

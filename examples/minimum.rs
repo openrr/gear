@@ -16,9 +16,6 @@ limitations under the License.
 
 extern crate gear;
 extern crate nalgebra as na;
-extern crate ncollide;
-
-use ncollide::shape::{Compound3, Cuboid, ShapeHandle3};
 
 fn main() {
     // Create path planner with loading urdf file and set end link name
@@ -30,24 +27,15 @@ fn main() {
     let solver = gear::JacobianIKSolverBuilder::<f64>::new()
         .num_max_try(1000)
         .allowable_target_distance(0.01)
-        .move_epsilon(0.00001)
-        .jacobian_move_epsilon(0.001)
+        .move_epsilon(0.0001)
         .finalize();
     let solver = gear::RandomInitializeIKSolver::new(solver, 100);
     // Create path planner with IK solver
     let mut planner = gear::JointPathPlannerWithIK::new(planner, solver);
 
     // Create obstacles
-    let obstacle_shape1 = ShapeHandle3::new(Cuboid::new(na::Vector3::new(0.20, 0.4, 0.1)));
-    let obstacle_pose1 = na::Isometry3::new(na::Vector3::new(0.7, 0.0, 0.1), na::zero());
-
-    let obstacle_shape2 = ShapeHandle3::new(Cuboid::new(na::Vector3::new(0.20, 0.3, 0.1)));
-    let obstacle_pose2 = na::Isometry3::new(na::Vector3::new(0.7, 0.0, 0.6), na::zero());
-
-    let target_objects = Compound3::new(vec![
-        (obstacle_pose1, obstacle_shape1),
-        (obstacle_pose2, obstacle_shape2),
-    ]);
+    let target_objects =
+        gear::create_compound_from_urdf("obstacles.urdf").expect("obstacle file not found");
 
     // Set IK target transformation
     let mut ik_target_pose = na::Isometry3::from_parts(

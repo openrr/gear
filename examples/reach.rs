@@ -20,32 +20,11 @@ extern crate k;
 extern crate nalgebra as na;
 extern crate ncollide;
 extern crate urdf_viz;
+extern crate urdf_rs;
 
 use k::JointContainer;
 use glfw::{Action, Key, WindowEvent};
-use ncollide::shape::{Compound3, Cuboid3, ShapeHandle3};
-
-fn add_shape_in_viewer(
-    viewer: &mut urdf_viz::Viewer,
-    shape: &ShapeHandle3<f64>,
-    pose: &na::Isometry3<f64>,
-    r: f32,
-    g: f32,
-    b: f32,
-) {
-    let mut scene_node = if let Some(cube) = shape.as_shape::<Cuboid3<f64>>() {
-        viewer.window.add_cube(
-            cube.half_extents()[0] as f32 * 2.0,
-            cube.half_extents()[1] as f32 * 2.0,
-            cube.half_extents()[2] as f32 * 2.0,
-        )
-    } else {
-        panic!("not support shape");
-    };
-    scene_node.set_local_transformation(na::convert(*pose));
-    scene_node.set_color(r, g, b);
-}
-
+use ncollide::shape::Compound3;
 
 struct CollisionAvoidApp<I>
 where
@@ -67,32 +46,12 @@ where
         viewer.setup(planner.urdf_robot().as_ref().unwrap());
         viewer.add_axis_cylinders("origin", 1.0);
 
-        let obstacle_shape1 = ShapeHandle3::new(Cuboid3::new(na::Vector3::new(0.20, 0.4, 0.1)));
-        let obstacle_pose1 = na::Isometry3::new(na::Vector3::new(0.7, 0.0, 0.1), na::zero());
-        add_shape_in_viewer(
-            &mut viewer,
-            &obstacle_shape1,
-            &obstacle_pose1,
-            0.5,
-            0.0,
-            0.5,
-        );
+        let path = std::path::Path::new("obstacles.urdf");
+        let urdf_obstacles =
+            urdf_rs::utils::read_urdf_or_xacro(path).expect("obstacle file not found");
+        let target_objects = gear::create_compound_from_urdf_robot(&urdf_obstacles);
+        viewer.setup(&urdf_obstacles);
 
-        let obstacle_shape2 = ShapeHandle3::new(Cuboid3::new(na::Vector3::new(0.20, 0.3, 0.1)));
-        let obstacle_pose2 = na::Isometry3::new(na::Vector3::new(0.7, 0.0, 0.6), na::zero());
-        add_shape_in_viewer(
-            &mut viewer,
-            &obstacle_shape2,
-            &obstacle_pose2,
-            0.5,
-            0.5,
-            0.0,
-        );
-
-        let target_objects = Compound3::new(vec![
-            (obstacle_pose1, obstacle_shape1),
-            (obstacle_pose2, obstacle_shape2),
-        ]);
         let ik_target_pose = na::Isometry3::from_parts(
             na::Translation3::new(0.40, 0.20, 0.3),
             na::UnitQuaternion::from_euler_angles(0.0, -0.1, 0.0),
