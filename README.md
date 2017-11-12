@@ -62,10 +62,10 @@ cargo run --release --example reach
 * Up/Down/Left/Right/`f`/`b` to translate IK target
 * Shift + Up/Down/Left/Right/`f`/`b` to rotate IK target
 * type `g` to move the end of the arm to the target
-
-* type `i` to just solve inverse kinematics for the target
+* type `i` to just solve inverse kinematics for the target without collision check
 * type `r` to set random pose
 * type `c` to check collision
+* type `v` to toggle shown element collision<->visual
 
 ### Use your robot
 

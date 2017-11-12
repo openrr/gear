@@ -42,14 +42,14 @@ where
     I: gear::InverseKinematicsSolver<f64>,
 {
     fn new(planner: gear::JointPathPlannerWithIK<I>) -> Self {
-        let mut viewer = urdf_viz::Viewer::new();
-        viewer.setup(planner.urdf_robot().as_ref().unwrap());
+        let mut viewer = urdf_viz::Viewer::new("gear: example reach");
+        viewer.add_robot(planner.urdf_robot().as_ref().unwrap());
         viewer.add_axis_cylinders("origin", 1.0);
 
         let urdf_obstacles = urdf_rs::utils::read_urdf_or_xacro("obstacles.urdf")
             .expect("obstacle file not found");
         let obstacles = gear::create_compound_from_urdf_robot(&urdf_obstacles);
-        viewer.setup(&urdf_obstacles);
+        viewer.add_robot(&urdf_obstacles);
 
         let ik_target_pose = na::Isometry3::from_parts(
             na::Translation3::new(0.40, 0.20, 0.3),
@@ -80,6 +80,7 @@ where
         }
     }
     fn run(&mut self) {
+        let mut is_collide_show = false;
         self.update_robot();
         self.update_ik_target();
         let mut plans: Vec<Vec<f64>> = Vec::new();
@@ -183,6 +184,7 @@ where
                                 self.update_robot();
                             }
                             Key::C => {
+                                self.reset_colliding_link_colors();
                                 self.colliding_link_names =
                                     self.planner.get_colliding_link_names(&self.obstacles);
                                 for name in &self.colliding_link_names {
@@ -190,6 +192,17 @@ where
                                     self.viewer.set_temporal_color(name, 0.8, 0.8, 0.6);
                                 }
                                 println!("===========");
+                            }
+                            Key::V => {
+                                is_collide_show = !is_collide_show;
+                                let ref_robot = self.planner.urdf_robot().as_ref().unwrap();
+                                self.viewer.remove_robot(ref_robot);
+                                self.viewer.add_robot_with_base_dir_and_collision_flag(
+                                    ref_robot,
+                                    None,
+                                    is_collide_show,
+                                );
+                                self.viewer.update(&self.planner);
                             }
                             _ => {}
                         }
