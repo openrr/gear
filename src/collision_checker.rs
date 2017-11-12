@@ -123,10 +123,18 @@ where
             ));
             Some(ShapeHandle3::new(cube))
         }
-        urdf_rs::Geometry::Cylinder { radius, length } => Some(ShapeHandle3::new(Cylinder::new(
-            na::convert(length * 0.5),
-            na::convert(radius),
-        ))),
+        urdf_rs::Geometry::Cylinder { radius, length } => {
+            let y_cylinder = Cylinder::new(na::convert(length * 0.5), na::convert(radius));
+            Some(ShapeHandle3::new(Compound3::new(vec![
+                (
+                    na::convert(na::Isometry3::from_parts(
+                        na::Translation3::new(0.0, 0.0, 0.0),
+                        na::UnitQuaternion::from_euler_angles(1.57, 0.0, 0.0),
+                    )),
+                    ShapeHandle3::new(y_cylinder)
+                ),
+            ])))
+        }
         urdf_rs::Geometry::Sphere { radius } => {
             Some(ShapeHandle3::new(Ball::new(na::convert(radius))))
         }
