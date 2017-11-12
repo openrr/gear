@@ -10,6 +10,9 @@ cache: cargo
 env:
   global:
     - RUST_BACKTRACE=1
+before_install:
+  - if [[ "$TRAVIS_OS_NAME" == "osx" ]]; then brew update fi
+  - if [[ "$TRAVIS_OS_NAME" == "osx" ]]; then brew install freetype fi  
 matrix:
   fast_finish: true
   allow_failures:
