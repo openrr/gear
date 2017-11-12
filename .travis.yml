@@ -3,6 +3,9 @@ rust:
   - stable
   - beta
   - nightly
+os:
+  - linux
+  - osx
 cache: cargo
 env:
   global:
