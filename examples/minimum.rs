@@ -19,7 +19,7 @@ extern crate nalgebra as na;
 
 fn main() {
     // Create path planner with loading urdf file and set end link name
-    let planner = gear::JointPathPlannerBuilder::try_from_urdf_file("sample.urdf")
+    let planner = gear::JointPathPlannerBuilder::from_urdf_file("sample.urdf")
         .expect("failed to create planner from urdf file")
         .collision_check_margin(0.01)
         .finalize();

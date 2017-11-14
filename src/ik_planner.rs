@@ -31,7 +31,7 @@ where
 {
     /// Joint Path Planner to be used to find collision free path
     ///
-    /// Currently, `JointPathPlanner<k::RcKinematicChain<f64>, k::LinkTree<f64>>` is used.
+    /// Currently, `JointPathPlanner<k::LinkTree<f64>>` is used.
     pub path_planner: DefaultJointPathPlanner<f64>,
     /// Inverse kinematics solver to find the goal joint angles
     pub ik_solver: K,
@@ -47,7 +47,7 @@ where
     ///
     /// ```
     /// // Create path planner with loading urdf file and set end link name
-    /// let planner = gear::JointPathPlannerBuilder::try_from_urdf_file("sample.urdf")
+    /// let planner = gear::JointPathPlannerBuilder::from_urdf_file("sample.urdf")
     ///     .unwrap()
     ///     .collision_check_margin(0.01)
     ///     .finalize();

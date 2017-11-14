@@ -247,7 +247,7 @@ where
     R: k::urdf::FromUrdf + k::LinkContainer<f64>,
 {
     /// Try to create `JointPathPlannerBuilder` instance from URDF file and end link name
-    pub fn try_from_urdf_file<P>(file: P) -> Result<JointPathPlannerBuilder<R>>
+    pub fn from_urdf_file<P>(file: P) -> Result<JointPathPlannerBuilder<R>>
     where
         P: AsRef<Path>,
     {
@@ -255,7 +255,7 @@ where
         get_joint_path_planner_builder_from_urdf(robot)
     }
     /// Try to create `JointPathPlannerBuilder` instance from `urdf_rs::Robot` instance
-    pub fn try_from_urdf_robot<P>(robot: urdf_rs::Robot) -> Result<JointPathPlannerBuilder<R>> {
+    pub fn from_urdf_robot<P>(robot: urdf_rs::Robot) -> Result<JointPathPlannerBuilder<R>> {
         get_joint_path_planner_builder_from_urdf(robot)
     }
 }
@@ -338,7 +338,7 @@ mod tests {
     }
     #[test]
     fn from_urdf() {
-        let _planner = DefaultJointPathPlannerBuilder::try_from_urdf_file("sample.urdf")
+        let _planner = DefaultJointPathPlannerBuilder::from_urdf_file("sample.urdf")
             .unwrap()
             .collision_check_margin(0.01)
             .finalize();
