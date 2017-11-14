@@ -35,13 +35,14 @@ where
     ik_target_pose: na::Isometry3<f64>,
     colliding_link_names: Vec<String>,
     viewer: urdf_viz::Viewer,
+    arm: k::RcKinematicChain<f64>,
 }
 
 impl<I> CollisionAvoidApp<I>
 where
     I: gear::InverseKinematicsSolver<f64>,
 {
-    fn new(planner: gear::JointPathPlannerWithIK<I>) -> Self {
+    fn new(planner: gear::JointPathPlannerWithIK<I>, end_link_name: &str) -> Self {
         let mut viewer = urdf_viz::Viewer::new("gear: example reach");
         viewer.add_robot(planner.urdf_robot().as_ref().unwrap());
         viewer.add_axis_cylinders("origin", 1.0);
@@ -55,6 +56,7 @@ where
             na::Translation3::new(0.40, 0.20, 0.3),
             na::UnitQuaternion::from_euler_angles(0.0, -0.1, 0.0),
         );
+        let arm = planner.create_arm(end_link_name).unwrap();
         viewer.add_axis_cylinders("ik_target", 0.3);
         CollisionAvoidApp {
             viewer,
@@ -62,6 +64,7 @@ where
             ik_target_pose,
             colliding_link_names: Vec::new(),
             planner,
+            arm,
         }
     }
     fn update_robot(&mut self) {
@@ -86,9 +89,7 @@ where
         let mut plans: Vec<Vec<f64>> = Vec::new();
         while self.viewer.render() {
             if !plans.is_empty() {
-                self.planner
-                    .set_joint_angles(&plans.pop().unwrap())
-                    .unwrap();
+                self.arm.set_joint_angles(&plans.pop().unwrap()).unwrap();
                 self.update_robot();
             }
 
@@ -152,7 +153,8 @@ where
                             }
                             Key::I => {
                                 self.reset_colliding_link_colors();
-                                let result = self.planner.solve_ik(&self.ik_target_pose);
+                                let result =
+                                    self.planner.solve_ik(&mut self.arm, &self.ik_target_pose);
                                 if result.is_ok() {
                                     self.update_robot();
                                 } else {
@@ -162,6 +164,7 @@ where
                             Key::G => {
                                 self.reset_colliding_link_colors();
                                 match self.planner.plan_with_ik(
+                                    &mut self.arm,
                                     &self.ik_target_pose,
                                     &self.obstacles,
                                 ) {
@@ -180,7 +183,7 @@ where
                             }
                             Key::R => {
                                 self.reset_colliding_link_colors();
-                                gear::set_random_joint_angles(&mut self.planner).unwrap();
+                                gear::set_random_joint_angles(&mut self.arm).unwrap();
                                 self.update_robot();
                             }
                             Key::C => {
@@ -219,7 +222,7 @@ fn main() {
     env_logger::init().unwrap();
     let input_string = env::args().nth(1).unwrap_or("sample.urdf".to_owned());
     let input_end_link = env::args().nth(2).unwrap_or("l_wrist2".to_owned());
-    let planner = gear::JointPathPlannerBuilder::try_from_urdf_file(&input_string, &input_end_link)
+    let planner = gear::JointPathPlannerBuilder::try_from_urdf_file(&input_string)
         .unwrap()
         .collision_check_margin(0.01)
         .finalize();
@@ -231,6 +234,6 @@ fn main() {
         .finalize();
     let solver = gear::RandomInitializeIKSolver::new(solver, 100);
     let planner = gear::JointPathPlannerWithIK::new(planner, solver);
-    let mut app = CollisionAvoidApp::new(planner);
+    let mut app = CollisionAvoidApp::new(planner, &input_end_link);
     app.run();
 }

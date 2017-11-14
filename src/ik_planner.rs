@@ -15,11 +15,11 @@ limitations under the License.
 */
 use k;
 use na;
-use std;
 use ncollide::shape::Compound3;
 use urdf_rs;
 
-use k::JointContainer;
+use k::LinkContainer;
+use k::CreateChain;
 
 use errors::*;
 use path_planner::DefaultJointPathPlanner;
@@ -47,7 +47,7 @@ where
     ///
     /// ```
     /// // Create path planner with loading urdf file and set end link name
-    /// let planner = gear::JointPathPlannerBuilder::try_from_urdf_file("sample.urdf", "l_wrist2")
+    /// let planner = gear::JointPathPlannerBuilder::try_from_urdf_file("sample.urdf")
     ///     .unwrap()
     ///     .collision_check_margin(0.01)
     ///     .finalize();
@@ -70,53 +70,56 @@ where
     pub fn urdf_robot(&self) -> &Option<urdf_rs::Robot> {
         &self.path_planner.urdf_robot
     }
-    pub fn solve_ik(&mut self, target_pose: &na::Isometry3<f64>) -> Result<f64> {
-        Ok(self.ik_solver.solve(
-            &mut self.path_planner.moving_arm,
-            target_pose,
-        )?)
+    pub fn create_arm(&self, end_link_name: &str) -> Result<k::RcKinematicChain<f64>> {
+        let candidates = self.path_planner.collision_check_robot.get_link_names();
+        self.path_planner
+            .collision_check_robot
+            .chain_from_end_link_name(end_link_name)
+            .ok_or(Error::Other(format!(
+                "end link `{}` not found: candidates = {:?}",
+                end_link_name,
+                candidates
+            )))
+    }
+    pub fn solve_ik<T>(&mut self, arm: &mut T, target_pose: &na::Isometry3<f64>) -> Result<f64>
+    where
+        T: k::KinematicChain<f64>,
+    {
+        Ok(self.ik_solver.solve(arm, target_pose)?)
     }
     pub fn get_colliding_link_names(&self, objects: &Compound3<f64>) -> Vec<String> {
         self.path_planner.get_colliding_link_names(objects)
     }
-    pub fn plan_with_ik(
+    pub fn plan_with_ik<T>(
         &mut self,
+        arm: &mut T,
         target_pose: &na::Isometry3<f64>,
         objects: &Compound3<f64>,
-    ) -> Result<Vec<Vec<f64>>> {
-        let initial = self.get_joint_angles();
-        let _ = self.ik_solver.solve(
-            &mut self.path_planner.moving_arm,
-            target_pose,
-        )?;
-        let goal = self.get_joint_angles();
-        self.path_planner.plan(&initial, &goal, objects)
+    ) -> Result<Vec<Vec<f64>>>
+    where
+        T: k::KinematicChain<f64>,
+    {
+        let initial = arm.get_joint_angles();
+        let _ = self.ik_solver.solve(arm, target_pose)?;
+        let goal = arm.get_joint_angles();
+        self.path_planner.plan(arm, &initial, &goal, objects)
     }
-    pub fn plan_joints(
+    pub fn plan_joints<T>(
         &mut self,
+        use_joints: &mut T,
         start_angles: &[f64],
         goal_angles: &[f64],
         objects: &Compound3<f64>,
-    ) -> Result<Vec<Vec<f64>>> {
-        self.path_planner.plan(start_angles, goal_angles, objects)
-    }
-}
-
-impl<K> k::JointContainer<f64> for JointPathPlannerWithIK<K>
-where
-    K: k::InverseKinematicsSolver<f64>,
-{
-    fn set_joint_angles(&mut self, joint_angles: &[f64]) -> std::result::Result<(), k::JointError> {
-        self.path_planner.set_joint_angles(joint_angles)
-    }
-    fn get_joint_angles(&self) -> Vec<f64> {
-        self.path_planner.get_joint_angles()
-    }
-    fn get_joint_limits(&self) -> Vec<Option<k::Range<f64>>> {
-        self.path_planner.get_joint_limits()
-    }
-    fn get_joint_names(&self) -> Vec<String> {
-        self.path_planner.get_joint_names()
+    ) -> Result<Vec<Vec<f64>>>
+    where
+        T: k::JointContainer<f64>,
+    {
+        self.path_planner.plan(
+            use_joints,
+            start_angles,
+            goal_angles,
+            objects,
+        )
     }
 }
 

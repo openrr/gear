@@ -16,25 +16,19 @@ limitations under the License.
 use k;
 use ncollide::shape::Compound3;
 use na;
-use std;
 use rrt;
 use std::path::Path;
 use urdf_rs;
-
-use k::JointContainer;
 
 use collision_checker::*;
 use errors::*;
 use funcs::*;
 
 /// Collision Avoidance Path Planner
-pub struct JointPathPlanner<K, R>
+pub struct JointPathPlanner<R>
 where
-    K: k::JointContainer<f64>,
     R: k::LinkContainer<f64>,
 {
-    /// Instance of `k::JointContainer` to set joint angles
-    pub moving_arm: K,
     /// Instance of `k::LinkContainer` to check the collision
     pub collision_check_robot: R,
     /// Collision checker
@@ -51,14 +45,12 @@ where
     pub urdf_robot: Option<urdf_rs::Robot>,
 }
 
-impl<K, R> JointPathPlanner<K, R>
+impl<R> JointPathPlanner<R>
 where
-    K: k::JointContainer<f64>,
     R: k::LinkContainer<f64>,
 {
     /// Create `JointPathPlanner`
     pub fn new(
-        moving_arm: K,
         collision_check_robot: R,
         collision_checker: CollisionChecker<f64>,
         step_length: f64,
@@ -66,7 +58,6 @@ where
         num_smoothing: usize,
     ) -> Self {
         JointPathPlanner {
-            moving_arm,
             collision_check_robot,
             collision_checker,
             step_length,
@@ -76,8 +67,16 @@ where
         }
     }
     /// Check if the joint_angles are OK
-    pub fn is_feasible(&mut self, joint_angles: &[f64], objects: &Compound3<f64>) -> bool {
-        if self.set_joint_angles(joint_angles).is_err() {
+    pub fn is_feasible<K>(
+        &mut self,
+        using_joints: &mut K,
+        joint_angles: &[f64],
+        objects: &Compound3<f64>,
+    ) -> bool
+    where
+        K: k::JointContainer<f64>,
+    {
+        if using_joints.set_joint_angles(joint_angles).is_err() {
             return false;
         }
         !self.has_any_colliding(objects)
@@ -110,49 +109,53 @@ where
         ret
     }
 
-    /// Plan the sequence of joint angles of `self.moving_arm`
+    /// Plan the sequence of joint angles of `using_joints`
     ///
     /// # Arguments
     ///
-    /// - start_angles: initial joint angles of `self.moving_arm`.
-    /// - goal_angles: goal joint angles of `self.moving_arm`.
-    /// - objects: The collision between `self.collision_check_robot` and `objects`
+    /// - `start_angles`: initial joint angles of `using_joints`.
+    /// - `goal_angles`: goal joint angles of `using_joints`.
+    /// - `objects`: The collision between `self.collision_check_robot` and `objects`
     ///   will be checked.
-    pub fn plan(
+    pub fn plan<K>(
         &mut self,
+        using_joints: &mut K,
         start_angles: &[f64],
         goal_angles: &[f64],
         objects: &Compound3<f64>,
-    ) -> Result<Vec<Vec<f64>>> {
-        let limits = self.moving_arm.get_joint_limits();
+    ) -> Result<Vec<Vec<f64>>>
+    where
+        K: k::JointContainer<f64>,
+    {
+        let limits = using_joints.get_joint_limits();
         let step_length = self.step_length;
         let max_try = self.max_try;
-        let current_angles = self.moving_arm.get_joint_angles();
-        if !self.is_feasible(start_angles, objects) {
-            self.moving_arm.set_joint_angles(&current_angles)?;
+        let current_angles = using_joints.get_joint_angles();
+        if !self.is_feasible(using_joints, start_angles, objects) {
+            using_joints.set_joint_angles(&current_angles)?;
             return Err(Error::Collision("Initialis colliding".to_owned()));
-        } else if !self.is_feasible(goal_angles, objects) {
-            self.moving_arm.set_joint_angles(&current_angles)?;
+        } else if !self.is_feasible(using_joints, goal_angles, objects) {
+            using_joints.set_joint_angles(&current_angles)?;
             return Err(Error::Collision("Goal is colliding".to_owned()));
         }
         let mut path = match rrt::dual_rrt_connect(
             start_angles,
             goal_angles,
-            |angles: &[f64]| self.is_feasible(angles, objects),
+            |angles: &[f64]| self.is_feasible(using_joints, angles, objects),
             || generate_random_joint_angles_from_limits(&limits),
             step_length,
             max_try,
         ) {
             Ok(p) => p,
             Err(error) => {
-                self.moving_arm.set_joint_angles(&current_angles)?;
+                using_joints.set_joint_angles(&current_angles)?;
                 return Err(Error::from(error));
             }
         };
         let num_smoothing = self.num_smoothing;
         rrt::smooth_path(
             &mut path,
-            |angles: &[f64]| self.is_feasible(angles, objects),
+            |angles: &[f64]| self.is_feasible(using_joints, angles, objects),
             step_length,
             num_smoothing,
         );
@@ -160,30 +163,8 @@ where
     }
 }
 
-impl<K, R> k::JointContainer<f64> for JointPathPlanner<K, R>
+impl<R> k::LinkContainer<f64> for JointPathPlanner<R>
 where
-    K: k::JointContainer<f64>,
-    R: k::LinkContainer<f64>,
-{
-    /// Set the joint angles of `self.moving_arm`
-    fn set_joint_angles(&mut self, joint_angles: &[f64]) -> std::result::Result<(), k::JointError> {
-        self.moving_arm.set_joint_angles(joint_angles)
-    }
-    /// Get the joint angles of `self.moving_arm`
-    fn get_joint_angles(&self) -> Vec<f64> {
-        self.moving_arm.get_joint_angles()
-    }
-    fn get_joint_limits(&self) -> Vec<Option<k::Range<f64>>> {
-        self.moving_arm.get_joint_limits()
-    }
-    fn get_joint_names(&self) -> Vec<String> {
-        self.moving_arm.get_joint_names()
-    }
-}
-
-impl<K, R> k::LinkContainer<f64> for JointPathPlanner<K, R>
-where
-    K: k::JointContainer<f64>,
     R: k::LinkContainer<f64>,
 {
     /// Calculate the transforms of all of the links
@@ -198,12 +179,10 @@ where
 }
 
 /// Builder pattern to create `JointPathPlanner`
-pub struct JointPathPlannerBuilder<K, R>
+pub struct JointPathPlannerBuilder<R>
 where
-    K: k::JointContainer<f64>,
     R: k::LinkContainer<f64>,
 {
-    moving_arm: K,
     collision_check_robot: R,
     collision_checker: CollisionChecker<f64>,
     step_length: f64,
@@ -213,21 +192,15 @@ where
     urdf_robot: Option<urdf_rs::Robot>,
 }
 
-impl<K, R> JointPathPlannerBuilder<K, R>
+impl<R> JointPathPlannerBuilder<R>
 where
-    K: k::JointContainer<f64>,
     R: k::LinkContainer<f64>,
 {
     /// Create from components
     ///
     /// There are also some utility functions to create from urdf
-    pub fn new(
-        moving_arm: K,
-        collision_check_robot: R,
-        collision_checker: CollisionChecker<f64>,
-    ) -> Self {
+    pub fn new(collision_check_robot: R, collision_checker: CollisionChecker<f64>) -> Self {
         JointPathPlannerBuilder {
-            moving_arm: moving_arm,
             collision_check_robot: collision_check_robot,
             collision_checker: collision_checker,
             step_length: 0.1,
@@ -253,9 +226,8 @@ where
         self.num_smoothing = num_smoothing;
         self
     }
-    pub fn finalize(mut self) -> JointPathPlanner<K, R> {
+    pub fn finalize(mut self) -> JointPathPlanner<R> {
         let mut planner = JointPathPlanner::new(
-            self.moving_arm,
             self.collision_check_robot,
             self.collision_checker,
             self.step_length,
@@ -270,55 +242,34 @@ where
     }
 }
 
-impl<J, L> JointPathPlannerBuilder<J, L>
+impl<R> JointPathPlannerBuilder<R>
 where
-    J: k::KinematicChain<f64>,
-    L: k::CreateChain<J, f64>
-        + k::urdf::FromUrdf
-        + k::LinkContainer<f64>,
+    R: k::urdf::FromUrdf + k::LinkContainer<f64>,
 {
     /// Try to create `JointPathPlannerBuilder` instance from URDF file and end link name
-    pub fn try_from_urdf_file<P>(
-        file: P,
-        end_link_name: &str,
-    ) -> Result<JointPathPlannerBuilder<J, L>>
+    pub fn try_from_urdf_file<P>(file: P) -> Result<JointPathPlannerBuilder<R>>
     where
         P: AsRef<Path>,
     {
         let robot = urdf_rs::utils::read_urdf_or_xacro(file.as_ref())?;
-        get_joint_path_planner_builder_from_urdf(robot, end_link_name)
+        get_joint_path_planner_builder_from_urdf(robot)
     }
     /// Try to create `JointPathPlannerBuilder` instance from `urdf_rs::Robot` instance
-    pub fn try_from_urdf_robot<P>(
-        robot: urdf_rs::Robot,
-        end_link_name: &str,
-    ) -> Result<JointPathPlannerBuilder<J, L>> {
-        get_joint_path_planner_builder_from_urdf(robot, end_link_name)
+    pub fn try_from_urdf_robot<P>(robot: urdf_rs::Robot) -> Result<JointPathPlannerBuilder<R>> {
+        get_joint_path_planner_builder_from_urdf(robot)
     }
 }
 
-fn get_joint_path_planner_builder_from_urdf<J, L>(
+fn get_joint_path_planner_builder_from_urdf<R>(
     urdf_robot: urdf_rs::Robot,
-    end_link_name: &str,
-) -> Result<JointPathPlannerBuilder<J, L>>
+) -> Result<JointPathPlannerBuilder<R>>
 where
-    J: k::KinematicChain<f64>,
-    L: k::CreateChain<J, f64> + k::urdf::FromUrdf + k::LinkContainer<f64>,
+    R: k::urdf::FromUrdf + k::LinkContainer<f64>,
 {
     const DEFAULT_MARGIN: f64 = 0.0;
     let collision_checker = CollisionChecker::from_urdf_robot(&urdf_robot, DEFAULT_MARGIN);
-    let collision_check_robot = L::from(&urdf_robot);
-    let candidates = collision_check_robot.get_link_names();
-    let moving_arm = collision_check_robot
-        .chain_from_end_link_name(end_link_name)
-        .ok_or(Error::Other(format!(
-            "end link `{}` not found: candidates = {:?}",
-            end_link_name,
-            candidates
-        )))?;
-
+    let collision_check_robot = R::from(&urdf_robot);
     Ok(JointPathPlannerBuilder {
-        moving_arm,
         collision_check_robot,
         collision_checker,
         step_length: 0.1,
@@ -329,11 +280,8 @@ where
     })
 }
 
-pub type DefaultJointPathPlanner<T> = JointPathPlanner<k::RcKinematicChain<T>, k::LinkTree<T>>;
-pub type DefaultJointPathPlannerBuilder<T> = JointPathPlannerBuilder<
-    k::RcKinematicChain<T>,
-    k::LinkTree<T>,
->;
+pub type DefaultJointPathPlanner<T> = JointPathPlanner<k::LinkTree<T>>;
+pub type DefaultJointPathPlannerBuilder<T> = JointPathPlannerBuilder<k::LinkTree<T>>;
 
 
 #[cfg(test)]
@@ -390,10 +338,9 @@ mod tests {
     }
     #[test]
     fn from_urdf() {
-        let _planner =
-            DefaultJointPathPlannerBuilder::try_from_urdf_file("sample.urdf", "l_wrist2")
-                .unwrap()
-                .collision_check_margin(0.01)
-                .finalize();
+        let _planner = DefaultJointPathPlannerBuilder::try_from_urdf_file("sample.urdf")
+            .unwrap()
+            .collision_check_margin(0.01)
+            .finalize();
     }
 }
