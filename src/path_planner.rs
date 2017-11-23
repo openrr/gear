@@ -268,7 +268,7 @@ where
 {
     const DEFAULT_MARGIN: f64 = 0.0;
     let collision_checker = CollisionChecker::from_urdf_robot(&urdf_robot, DEFAULT_MARGIN);
-    let collision_check_robot = R::from(&urdf_robot);
+    let collision_check_robot = R::from_urdf_robot(&urdf_robot);
     Ok(JointPathPlannerBuilder {
         collision_check_robot,
         collision_checker,
@@ -292,6 +292,7 @@ mod tests {
     use ncollide::shape::Cuboid;
     use na::{Isometry3, Vector3};
     use k::JointContainer;
+    use k::urdf::FromUrdf;
 
     #[test]
     fn collision_check() {
@@ -301,7 +302,7 @@ mod tests {
         let target = Cuboid::new(Vector3::new(0.5, 1.0, 0.5));
         let target_pose = Isometry3::new(Vector3::new(0.9, 0.0, 0.0), na::zero());
 
-        let mut robot = k::urdf::create_tree::<f32>(&urdf_robot);
+        let mut robot = k::LinkTree::<f32>::from_urdf_robot(&urdf_robot);
 
         let names = checker.get_colliding_link_names(&robot, &target, &target_pose);
         assert_eq!(
@@ -310,8 +311,8 @@ mod tests {
                 "l_elbow1",
                 "l_wrist1",
                 "l_wrist2",
-                "l_gripper1",
                 "l_gripper2",
+                "l_gripper1",
             ]
         );
         let angles = vec![-1.3, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0];
@@ -319,7 +320,7 @@ mod tests {
         let names = checker.get_colliding_link_names(&robot, &target, &target_pose);
         assert_eq!(
             names,
-            vec!["l_wrist1", "l_wrist2", "l_gripper1", "l_gripper2"]
+            vec!["l_wrist1", "l_wrist2", "l_gripper2", "l_gripper1"]
         );
         let target_pose = Isometry3::new(Vector3::new(0.7, 0.0, 0.0), na::zero());
         let names = checker.get_colliding_link_names(&robot, &target, &target_pose);
@@ -331,8 +332,8 @@ mod tests {
                 "l_elbow1",
                 "l_wrist1",
                 "l_wrist2",
-                "l_gripper1",
                 "l_gripper2",
+                "l_gripper1",
             ]
         );
     }

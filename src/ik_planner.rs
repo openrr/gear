@@ -19,7 +19,7 @@ use ncollide::shape::Compound3;
 use urdf_rs;
 
 use k::LinkContainer;
-use k::CreateChain;
+use k::ChainContainer;
 
 use errors::*;
 use path_planner::DefaultJointPathPlanner;
@@ -70,11 +70,11 @@ where
     pub fn urdf_robot(&self) -> &Option<urdf_rs::Robot> {
         &self.path_planner.urdf_robot
     }
-    pub fn create_arm(&self, end_link_name: &str) -> Result<k::RcKinematicChain<f64>> {
+    pub fn create_arm(&self, end_link_name: &str) -> Result<k::LinkChain<f64>> {
         let candidates = self.path_planner.collision_check_robot.get_link_names();
         self.path_planner
             .collision_check_robot
-            .chain_from_end_link_name(end_link_name)
+            .get_chain(end_link_name)
             .ok_or(Error::Other(format!(
                 "end link `{}` not found: candidates = {:?}",
                 end_link_name,

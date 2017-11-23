@@ -35,7 +35,7 @@ where
     ik_target_pose: na::Isometry3<f64>,
     colliding_link_names: Vec<String>,
     viewer: urdf_viz::Viewer,
-    arm: k::RcKinematicChain<f64>,
+    arm: k::LinkChain<f64>,
 }
 
 impl<I> CollisionAvoidApp<I>
