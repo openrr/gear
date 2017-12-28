@@ -162,7 +162,7 @@ pub struct CollisionChecker<T>
 where
     T: Real,
 {
-    name_collision_model_map: HashMap<String, (ShapeHandle3<T>, na::Isometry3<T>)>,
+    name_collision_model_map: HashMap<String, Vec<(ShapeHandle3<T>, na::Isometry3<T>)>>,
     /// margin length for collision check
     pub prediction: T,
 }
@@ -173,7 +173,7 @@ where
 {
     /// Create CollisionChecker from HashMap
     pub fn new(
-        name_collision_model_map: HashMap<String, (ShapeHandle3<T>, na::Isometry3<T>)>,
+        name_collision_model_map: HashMap<String, Vec<(ShapeHandle3<T>, na::Isometry3<T>)>>,
         prediction: T,
     ) -> Self {
         CollisionChecker {
@@ -195,9 +195,21 @@ where
     ) -> Self {
         let mut name_collision_model_map = HashMap::new();
         for l in &urdf_robot.links {
-            if let Some(col) = create_collision_model(&l.collision.geometry, base_dir) {
-                let pose = from_urdf_pose(&l.collision.origin);
-                name_collision_model_map.insert(l.name.to_string(), (col, pose));
+            let col_pose_vec = l.collision
+                .iter()
+                .filter_map(|collision| if let Some(col) = create_collision_model(
+                    &collision.geometry,
+                    base_dir,
+                )
+                {
+                    let pose = from_urdf_pose(&collision.origin);
+                    Some((col, pose))
+                } else {
+                    None
+                })
+                .collect::<Vec<_>>();
+            if !col_pose_vec.is_empty() {
+                name_collision_model_map.insert(l.name.to_string(), col_pose_vec);
             }
         }
         CollisionChecker {
@@ -257,23 +269,27 @@ where
             )
         {
             match self.name_collision_model_map.get(&link_name) {
-                Some(obj) => {
-                    let ctct = query::proximity(
-                        &(trans * obj.1),
-                        &*obj.0,
-                        target_pose,
-                        target_shape,
-                        self.prediction,
-                    );
-                    if ctct != Proximity::Disjoint {
-                        names.push(link_name);
-                        if first_return {
-                            return names;
+                Some(obj_vec) => {
+                    for obj in obj_vec {
+                        let ctct = query::proximity(
+                            &(trans * obj.1),
+                            &*obj.0,
+                            target_pose,
+                            target_shape,
+                            self.prediction,
+                        );
+                        if ctct != Proximity::Disjoint {
+                            names.push(link_name);
+                            if first_return {
+                                return names;
+                            } else {
+                                break;
+                            }
                         }
                     }
                 }
                 None => {
-                    println!("collision model {} not found", link_name);
+                    debug!("collision model {} not found", link_name);
                 }
             }
         }
@@ -298,13 +314,19 @@ pub fn create_compound_from_urdf_robot(urdf_obstacle: &urdf_rs::Robot) -> Compou
     let compound_data = urdf_obstacle
         .links
         .iter()
-        .filter_map(|l| match create_collision_model(
-            &l.collision.geometry,
-            None,
-        ) {
-            Some(col) => Some((from_urdf_pose(&l.collision.origin), col)),
-            None => None,
+        .flat_map(|l| {
+            l.collision
+                .iter()
+                .map(|collision| match create_collision_model(
+                    &collision.geometry,
+                    None,
+                ) {
+                    Some(col) => Some((from_urdf_pose(&collision.origin), col)),
+                    None => None,
+                })
+                .collect::<Vec<_>>()
         })
-        .collect();
+        .filter_map(|col_tuple| col_tuple)
+        .collect::<Vec<_>>();
     Compound3::new(compound_data)
 }

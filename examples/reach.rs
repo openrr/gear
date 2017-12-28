@@ -71,10 +71,12 @@ where
         self.viewer.update(&self.planner);
     }
     fn update_ik_target(&mut self) {
-        if let Some(obj) = self.viewer.scenes.get_mut("ik_target") {
-            obj.0.set_local_transformation(
-                na::convert(self.ik_target_pose),
-            );
+        if let Some(obj_vec) = self.viewer.scenes.get_mut("ik_target") {
+            for obj in obj_vec {
+                obj.0.set_local_transformation(
+                    na::convert(self.ik_target_pose),
+                )
+            }
         }
     }
     fn reset_colliding_link_colors(&mut self) {
@@ -217,7 +219,7 @@ fn main() {
     use std::env;
     env_logger::init().unwrap();
     let input_string = env::args().nth(1).unwrap_or("sample.urdf".to_owned());
-    let input_end_link = env::args().nth(2).unwrap_or("l_wrist2".to_owned());
+    let input_end_link = env::args().nth(2).unwrap_or("l_tool".to_owned());
     let planner = gear::JointPathPlannerBuilder::from_urdf_file(&input_string)
         .unwrap()
         .collision_check_margin(0.01)
