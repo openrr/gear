@@ -170,11 +170,7 @@ where
                                 ) {
                                     Ok(mut plan) => {
                                         plan.reverse();
-                                        for i in 0..(plan.len() - 1) {
-                                            let mut interpolated_angles =
-                                                gear::interpolate(&plan[i], &plan[i + 1], 0.1);
-                                            plans.append(&mut interpolated_angles);
-                                        }
+                                        plans = gear::interpolate(&plan, 5.0, 0.1).unwrap();
                                     }
                                     Err(error) => {
                                         println!("failed to reach!! {}", error);

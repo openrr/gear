@@ -26,8 +26,10 @@ extern crate k;
 extern crate log;
 extern crate nalgebra as na;
 extern crate ncollide;
+extern crate num_traits;
 extern crate rand;
 extern crate rrt;
+extern crate trajectory;
 extern crate urdf_rs;
 
 mod errors;

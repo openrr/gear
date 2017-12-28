@@ -16,8 +16,10 @@ limitations under the License.
 
 use k;
 use na::{self, Real};
+use num_traits::Float;
 use rand;
 use std::f64::consts::PI;
+use trajectory::{CubicSpline, Trajectory};
 
 use errors::*;
 
@@ -71,18 +73,6 @@ where
 }
 
 
-fn distance<T>(a: &[T], b: &[T]) -> T
-where
-    T: Real,
-{
-    debug_assert!(a.len() == b.len());
-    a.iter()
-        .zip(b.iter())
-        .map(|(x, y)| (*x - *y) * (*x - *y))
-        .fold(T::from_f64(0.0).unwrap(), ::std::ops::Add::add)
-        .sqrt()
-}
-
 /// Find the nearest angle on is for the joints wihout limits
 pub fn modify_to_nearest_angle<T>(vec1: &[T], vec2: &mut [T], limits: &Vec<Option<k::Range<T>>>)
 where
@@ -108,25 +98,28 @@ where
 }
 
 /// Interpolate two vectors with the length
-pub fn interpolate<T>(vec1: &[T], vec2: &[T], unit_length: T) -> Vec<Vec<T>>
+pub fn interpolate<T>(
+    points: &Vec<Vec<T>>,
+    total_duration: T,
+    unit_duration: T,
+) -> Option<Vec<Vec<T>>>
 where
-    T: Real,
+    T: Float,
 {
-    assert_eq!(vec1.len(), vec2.len());
-    let mut ret: Vec<Vec<T>> = vec![];
-    let dist = distance(vec1, vec2);
-    let num: usize = (dist / unit_length).to_subset().unwrap() as usize;
-    for i in 0..num {
-        ret.push(
-            vec1.iter()
-                .zip(vec2.iter())
-                .map(|(v1, v2)| {
-                    *v1 + (*v2 - *v1) * T::from_f64((i as f64) / (num as f64)).unwrap()
-                })
-                .collect::<Vec<T>>(),
-        );
+    let mut times = Vec::new();
+    let key_frame_unit_duration = total_duration / (T::from(points.len())? - T::one());
+    for i in 0..points.len() {
+        times.push(key_frame_unit_duration * T::from(i)?);
     }
-    ret
+    assert_eq!(times.len(), points.len());
+    let spline = CubicSpline::new(times, points.clone())?;
+    let mut ret = Vec::new();
+    let mut t = T::zero();
+    while t < total_duration {
+        ret.push(spline.position(t)?);
+        t = t + unit_duration;
+    }
+    Some(ret)
 }
 
 /// Set random joint angles
