@@ -172,7 +172,11 @@ where
                                 ) {
                                     Ok(mut plan) => {
                                         plan.reverse();
-                                        plans = gear::interpolate(&plan, 5.0, 0.1).unwrap();
+                                        plans = gear::interpolate(&plan, 5.0, 0.1)
+                                            .unwrap()
+                                            .into_iter()
+                                            .map(|point| point.position)
+                                            .collect();
                                     }
                                     Err(error) => {
                                         println!("failed to reach!! {}", error);

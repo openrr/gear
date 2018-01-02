@@ -13,7 +13,6 @@ WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
 See the License for the specific language governing permissions and
 limitations under the License.
 */
-#[cfg(feature = "use-assimp")]
 use assimp;
 use k;
 use na::{self, Isometry3, Real, Translation3, UnitQuaternion, Vector3};
@@ -40,7 +39,6 @@ where
     ))
 }
 
-#[cfg(feature = "assimp")]
 fn load_mesh<P, T>(filename: P, scale: &[f64]) -> Result<TriMesh<na::Point3<T>>>
 where
     P: AsRef<Path>,
@@ -58,7 +56,6 @@ where
     ))
 }
 
-#[cfg(feature = "assimp")]
 fn convert_assimp_scene_to_ncollide_mesh<T>(
     scene: assimp::Scene,
     scale: &[f64],
@@ -95,16 +92,6 @@ where
         None,
         None,
     )
-}
-
-
-#[cfg(not(feature = "assimp"))]
-fn load_mesh<P, T>(_filename: P, _scale: &[f64]) -> Result<TriMesh<na::Point3<T>>>
-where
-    P: AsRef<Path>,
-    T: Real,
-{
-    Err(Error::from("mesh is not not supported"))
 }
 
 fn create_collision_model<T>(
@@ -148,10 +135,12 @@ where
                 error!("{} not found", replaced_filename);
                 return None;
             }
-            if let Ok(mesh) = load_mesh(path, &scale) {
-                Some(ShapeHandle3::new(mesh))
-            } else {
-                None
+            match load_mesh(path, &scale) {
+                Ok(mesh) => Some(ShapeHandle3::new(mesh)),
+                Err(err) => {
+                    error!("load_mesh {:?} failed: {}", path, err);
+                    None
+                }
             }
         }
     }
@@ -197,17 +186,13 @@ where
         for l in &urdf_robot.links {
             let col_pose_vec = l.collision
                 .iter()
-                .filter_map(|collision| if let Some(col) = create_collision_model(
-                    &collision.geometry,
-                    base_dir,
-                )
-                {
-                    let pose = from_urdf_pose(&collision.origin);
-                    Some((col, pose))
-                } else {
-                    None
+                .filter_map(|collision| {
+                    create_collision_model(&collision.geometry, base_dir).map(
+                        |col| (col, from_urdf_pose(&collision.origin)),
+                    )
                 })
                 .collect::<Vec<_>>();
+            debug!("name={}, ln={}", l.name, col_pose_vec.len());
             if !col_pose_vec.is_empty() {
                 name_collision_model_map.insert(l.name.to_string(), col_pose_vec);
             }

@@ -82,7 +82,7 @@ where
     for i in 0..vec1.len() {
         if limits[i].is_none() {
             // TODO: deal not only no limit
-            let pi2 = na::convert(3.1415 * 2.0);
+            let pi2 = T::pi() * na::convert(2.0);
             let dist1 = (vec1[i] - vec2[i]).abs();
             let dist2 = (vec1[i] - (vec2[i] - pi2)).abs();
             if dist1 > dist2 {
@@ -97,12 +97,20 @@ where
     }
 }
 
+pub struct TrajectoryPoint<T> {
+    pub position: Vec<T>,
+    pub velocity: Vec<T>,
+    pub acceleration: Vec<T>,
+}
+
 /// Interpolate two vectors with the length
+///
+/// returns vector of (position, velocity, acceleration)
 pub fn interpolate<T>(
     points: &Vec<Vec<T>>,
     total_duration: T,
     unit_duration: T,
-) -> Option<Vec<Vec<T>>>
+) -> Option<Vec<TrajectoryPoint<T>>>
 where
     T: Float,
 {
@@ -113,10 +121,14 @@ where
     }
     assert_eq!(times.len(), points.len());
     let spline = CubicSpline::new(times, points.clone())?;
-    let mut ret = Vec::new();
     let mut t = T::zero();
+    let mut ret = Vec::new();
     while t < total_duration {
-        ret.push(spline.position(t)?);
+        ret.push(TrajectoryPoint {
+            position: spline.position(t)?,
+            velocity: spline.velocity(t)?,
+            acceleration: spline.acceleration(t)?,
+        });
         t = t + unit_duration;
     }
     Some(ret)

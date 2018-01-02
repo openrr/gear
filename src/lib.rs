@@ -18,9 +18,7 @@ limitations under the License.
 //! Get the collision free trajectory of joint angles. `ncollide` is used to check the
 //! collision between the robot and the environment.
 //!
-#[cfg(feature = "assimp")]
 extern crate assimp;
-
 extern crate k;
 #[macro_use]
 extern crate log;

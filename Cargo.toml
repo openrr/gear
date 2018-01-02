@@ -10,10 +10,6 @@ repository = "https://github.com/OTL/gear"
 documentation = "http://docs.rs/gear"
 readme = "README.md"
 
-[features]
-default = ["use-assimp"]
-use-assimp = ["urdf-viz/assimp", "assimp"]
-
 [dependencies]
 k = "0.8.0"
 log = "0.3.8"
@@ -24,11 +20,11 @@ rrt = "0.3.0"
 urdf-rs = "0.4.0"
 trajectory = "0.0.1"
 num-traits = "0.1"
-assimp = { version = "0.3.0", optional = true }
+assimp = "0.3.0"
 
 [dev-dependencies]
 env_logger = "0.4.2"
 glfw = "0.15.0"
 structopt = "0.1.0"
 structopt-derive = "0.1.0"
-urdf-viz = { version = "0.8.0", default-features = false}
+urdf-viz = "0.8.0"
