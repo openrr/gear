@@ -96,10 +96,10 @@ where
         false
     }
     /// Get the names of colliding links
-    pub fn get_colliding_link_names(&self, objects: &Compound3<f64>) -> Vec<String> {
+    pub fn colliding_link_names(&self, objects: &Compound3<f64>) -> Vec<String> {
         let mut ret = Vec::new();
         for shape in objects.shapes() {
-            let mut colliding_names = self.collision_checker.get_colliding_link_names(
+            let mut colliding_names = self.collision_checker.colliding_link_names(
                 &self.collision_check_robot,
                 &*shape.1,
                 &shape.0,

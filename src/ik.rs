@@ -20,6 +20,7 @@ use na::{self, Real};
 use funcs::*;
 
 /// Randomize initial joint angles before solving
+#[derive(Debug)]
 pub struct RandomInitializeIKSolver<T, I>
 where
     I: InverseKinematicsSolver<T>,
