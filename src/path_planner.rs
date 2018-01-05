@@ -304,7 +304,7 @@ mod tests {
 
         let mut robot = k::LinkTree::<f32>::from_urdf_robot(&urdf_robot);
 
-        let names = checker.get_colliding_link_names(&robot, &target, &target_pose);
+        let names = checker.colliding_link_names(&robot, &target, &target_pose);
         assert_eq!(
             names,
             vec![
@@ -317,13 +317,13 @@ mod tests {
         );
         let angles = vec![-1.3, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0];
         robot.set_joint_angles(&angles).unwrap();
-        let names = checker.get_colliding_link_names(&robot, &target, &target_pose);
+        let names = checker.colliding_link_names(&robot, &target, &target_pose);
         assert_eq!(
             names,
             vec!["l_wrist1", "l_wrist2", "l_gripper2", "l_gripper1"]
         );
         let target_pose = Isometry3::new(Vector3::new(0.7, 0.0, 0.0), na::zero());
-        let names = checker.get_colliding_link_names(&robot, &target, &target_pose);
+        let names = checker.colliding_link_names(&robot, &target, &target_pose);
         assert_eq!(
             names,
             vec![

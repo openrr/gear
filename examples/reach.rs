@@ -191,7 +191,7 @@ where
                             Key::C => {
                                 self.reset_colliding_link_colors();
                                 self.colliding_link_names =
-                                    self.planner.get_colliding_link_names(&self.obstacles);
+                                    self.planner.colliding_link_names(&self.obstacles);
                                 for name in &self.colliding_link_names {
                                     println!("{}", name);
                                     self.viewer.set_temporal_color(name, 0.8, 0.8, 0.6);
