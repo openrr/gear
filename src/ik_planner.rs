@@ -87,8 +87,8 @@ where
     {
         Ok(self.ik_solver.solve(arm, target_pose)?)
     }
-    pub fn get_colliding_link_names(&self, objects: &Compound3<f64>) -> Vec<String> {
-        self.path_planner.get_colliding_link_names(objects)
+    pub fn colliding_link_names(&self, objects: &Compound3<f64>) -> Vec<String> {
+        self.path_planner.colliding_link_names(objects)
     }
     pub fn plan_with_ik<T>(
         &mut self,

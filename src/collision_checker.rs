@@ -212,15 +212,11 @@ where
     where
         R: k::LinkContainer<T>,
     {
-        !self.get_colliding_link_names_with_first_return_flag(
-            robot,
-            target_shape,
-            target_pose,
-            true,
-        ).is_empty()
+        !self.colliding_link_names_with_first_return_flag(robot, target_shape, target_pose, true)
+            .is_empty()
     }
     /// Returns the names which is colliding with the target shape/pose
-    pub fn get_colliding_link_names<R>(
+    pub fn colliding_link_names<R>(
         &self,
         robot: &R,
         target_shape: &Shape3<T>,
@@ -229,15 +225,10 @@ where
     where
         R: k::LinkContainer<T>,
     {
-        self.get_colliding_link_names_with_first_return_flag(
-            robot,
-            target_shape,
-            target_pose,
-            false,
-        )
+        self.colliding_link_names_with_first_return_flag(robot, target_shape, target_pose, false)
     }
 
-    fn get_colliding_link_names_with_first_return_flag<R>(
+    fn colliding_link_names_with_first_return_flag<R>(
         &self,
         robot: &R,
         target_shape: &Shape3<T>,

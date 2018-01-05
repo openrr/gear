@@ -97,6 +97,7 @@ where
     }
 }
 
+#[Derive(Debug, Clone)]
 pub struct TrajectoryPoint<T> {
     pub position: Vec<T>,
     pub velocity: Vec<T>,
