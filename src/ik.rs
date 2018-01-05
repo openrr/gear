@@ -61,8 +61,8 @@ where
         T: Real,
     {
         let mut result = Err(k::IKError::NotConverged);
-        let limits = arm.get_joint_limits();
-        let initial_angles = arm.get_joint_angles();
+        let limits = arm.joint_limits();
+        let initial_angles = arm.joint_angles();
         for _ in 0..self.num_max_try {
             result = self.solver.solve(arm, target_pose);
             if result.is_ok() {

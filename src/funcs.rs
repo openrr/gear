@@ -140,7 +140,7 @@ where
     K: k::JointContainer<T>,
     T: Real,
 {
-    let limits = robot.get_joint_limits();
+    let limits = robot.joint_limits();
     robot.set_joint_angles(&generate_random_joint_angles_from_limits(&limits))
 }
 

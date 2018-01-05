@@ -127,10 +127,10 @@ where
     where
         K: k::JointContainer<f64>,
     {
-        let limits = using_joints.get_joint_limits();
+        let limits = using_joints.joint_limits();
         let step_length = self.step_length;
         let max_try = self.max_try;
-        let current_angles = using_joints.get_joint_angles();
+        let current_angles = using_joints.joint_angles();
         if !self.is_feasible(using_joints, start_angles, objects) {
             using_joints.set_joint_angles(&current_angles)?;
             return Err(Error::Collision("Initialis colliding".to_owned()));
@@ -168,13 +168,13 @@ where
     R: k::LinkContainer<f64>,
 {
     /// Calculate the transforms of all of the links
-    fn calc_link_transforms(&self) -> Vec<na::Isometry3<f64>> {
-        self.collision_check_robot.calc_link_transforms()
+    fn link_transforms(&self) -> Vec<na::Isometry3<f64>> {
+        self.collision_check_robot.link_transforms()
     }
 
     /// Get the names of the links
-    fn get_link_names(&self) -> Vec<String> {
-        self.collision_check_robot.get_link_names()
+    fn link_names(&self) -> Vec<String> {
+        self.collision_check_robot.link_names()
     }
 }
 

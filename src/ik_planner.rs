@@ -71,10 +71,10 @@ where
         &self.path_planner.urdf_robot
     }
     pub fn create_arm(&self, end_link_name: &str) -> Result<k::LinkChain<f64>> {
-        let candidates = self.path_planner.collision_check_robot.get_link_names();
+        let candidates = self.path_planner.collision_check_robot.link_names();
         self.path_planner
             .collision_check_robot
-            .get_chain(end_link_name)
+            .new_chain(end_link_name)
             .ok_or(Error::Other(format!(
                 "end link `{}` not found: candidates = {:?}",
                 end_link_name,
@@ -99,9 +99,9 @@ where
     where
         T: k::KinematicChain<f64>,
     {
-        let initial = arm.get_joint_angles();
+        let initial = arm.joint_angles();
         let _ = self.ik_solver.solve(arm, target_pose)?;
-        let goal = arm.get_joint_angles();
+        let goal = arm.joint_angles();
         self.path_planner.plan(arm, &initial, &goal, objects)
     }
     pub fn plan_joints<T>(
@@ -128,12 +128,12 @@ where
     K: k::InverseKinematicsSolver<f64>,
 {
     /// Calculate the transforms of all of the links
-    fn calc_link_transforms(&self) -> Vec<na::Isometry3<f64>> {
-        self.path_planner.calc_link_transforms()
+    fn link_transforms(&self) -> Vec<na::Isometry3<f64>> {
+        self.path_planner.link_transforms()
     }
 
     /// Get the names of the links
-    fn get_link_names(&self) -> Vec<String> {
-        self.path_planner.get_link_names()
+    fn link_names(&self) -> Vec<String> {
+        self.path_planner.link_names()
     }
 }

@@ -248,11 +248,7 @@ where
         R: k::LinkContainer<T>,
     {
         let mut names = Vec::new();
-        for (trans, link_name) in
-            robot.calc_link_transforms().iter().zip(
-                robot.get_link_names(),
-            )
-        {
+        for (trans, link_name) in robot.link_transforms().iter().zip(robot.link_names()) {
             match self.name_collision_model_map.get(&link_name) {
                 Some(obj_vec) => {
                     for obj in obj_vec {
