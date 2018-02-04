@@ -68,15 +68,14 @@ where
         }
     }
     fn update_robot(&mut self) {
+        // this is hack to handle invalid mimic joints
+        let ja = self.planner.path_planner.collision_check_robot.joint_angles();
+        self.planner.path_planner.collision_check_robot.set_joint_angles(&ja).unwrap();
         self.viewer.update(&self.planner);
     }
     fn update_ik_target(&mut self) {
-        if let Some(obj_vec) = self.viewer.scenes.get_mut("ik_target") {
-            for obj in obj_vec {
-                obj.0.set_local_transformation(
-                    na::convert(self.ik_target_pose),
-                )
-            }
+        if let Some(obj) = self.viewer.scene_node_mut("ik_target") {
+            obj.set_local_transformation(na::convert(self.ik_target_pose));
         }
     }
     fn reset_colliding_link_colors(&mut self) {
