@@ -19,18 +19,18 @@ extern crate glfw;
 extern crate k;
 extern crate nalgebra as na;
 extern crate ncollide;
-extern crate urdf_viz;
 extern crate urdf_rs;
+extern crate urdf_viz;
 
-use k::JointContainer;
 use glfw::{Action, Key, WindowEvent};
+use k::JointContainer;
 use ncollide::shape::Compound3;
 
 struct CollisionAvoidApp<I>
 where
     I: gear::InverseKinematicsSolver<f64>,
 {
-    planner: gear::JointPathPlannerWithIK<I>,
+    planner: gear::JointPathPlannerWithIK<f64, I>,
     obstacles: Compound3<f64>,
     ik_target_pose: na::Isometry3<f64>,
     colliding_link_names: Vec<String>,
@@ -42,13 +42,13 @@ impl<I> CollisionAvoidApp<I>
 where
     I: gear::InverseKinematicsSolver<f64>,
 {
-    fn new(planner: gear::JointPathPlannerWithIK<I>, end_link_name: &str) -> Self {
+    fn new(planner: gear::JointPathPlannerWithIK<f64, I>, end_link_name: &str) -> Self {
         let mut viewer = urdf_viz::Viewer::new("gear: example reach");
         viewer.add_robot(planner.urdf_robot().as_ref().unwrap());
         viewer.add_axis_cylinders("origin", 1.0);
 
-        let urdf_obstacles = urdf_rs::utils::read_urdf_or_xacro("obstacles.urdf")
-            .expect("obstacle file not found");
+        let urdf_obstacles =
+            urdf_rs::utils::read_urdf_or_xacro("obstacles.urdf").expect("obstacle file not found");
         let obstacles = gear::create_compound_from_urdf_robot(&urdf_obstacles);
         viewer.add_robot(&urdf_obstacles);
 
@@ -69,8 +69,15 @@ where
     }
     fn update_robot(&mut self) {
         // this is hack to handle invalid mimic joints
-        let ja = self.planner.path_planner.collision_check_robot.joint_angles();
-        self.planner.path_planner.collision_check_robot.set_joint_angles(&ja).unwrap();
+        let ja = self.planner
+            .path_planner
+            .collision_check_robot
+            .joint_angles();
+        self.planner
+            .path_planner
+            .collision_check_robot
+            .set_joint_angles(&ja)
+            .unwrap();
         self.viewer.update(&self.planner);
     }
     fn update_ik_target(&mut self) {
@@ -96,121 +103,118 @@ where
 
             for event in self.viewer.events().iter() {
                 match event.value {
-                    WindowEvent::Key(code, _, Action::Press, mods) => {
-                        match code {
-                            Key::Up => {
-                                if mods.contains(glfw::modifiers::Shift) {
-                                    self.ik_target_pose.rotation *=
-                                        na::UnitQuaternion::from_euler_angles(0.0, 0.0, 0.2);
-                                } else {
-                                    self.ik_target_pose.translation.vector[2] += 0.05;
-                                }
-                                self.update_ik_target();
+                    WindowEvent::Key(code, _, Action::Press, mods) => match code {
+                        Key::Up => {
+                            if mods.contains(glfw::modifiers::Shift) {
+                                self.ik_target_pose.rotation *=
+                                    na::UnitQuaternion::from_euler_angles(0.0, 0.0, 0.2);
+                            } else {
+                                self.ik_target_pose.translation.vector[2] += 0.05;
                             }
-                            Key::Down => {
-                                if mods.contains(glfw::modifiers::Shift) {
-                                    self.ik_target_pose.rotation *=
-                                        na::UnitQuaternion::from_euler_angles(0.0, 0.0, -0.2);
-                                } else {
-                                    self.ik_target_pose.translation.vector[2] -= 0.05;
-                                }
-                                self.update_ik_target();
-                            }
-                            Key::Left => {
-                                if mods.contains(glfw::modifiers::Shift) {
-                                    self.ik_target_pose.rotation *=
-                                        na::UnitQuaternion::from_euler_angles(0.0, 0.2, -0.0);
-                                } else {
-                                    self.ik_target_pose.translation.vector[1] += 0.05;
-                                }
-                                self.update_ik_target();
-                            }
-                            Key::Right => {
-                                if mods.contains(glfw::modifiers::Shift) {
-                                    self.ik_target_pose.rotation *=
-                                        na::UnitQuaternion::from_euler_angles(0.0, -0.2, 0.0);
-                                } else {
-                                    self.ik_target_pose.translation.vector[1] -= 0.05;
-                                }
-                                self.update_ik_target();
-                            }
-                            Key::B => {
-                                if mods.contains(glfw::modifiers::Shift) {
-                                    self.ik_target_pose.rotation *=
-                                        na::UnitQuaternion::from_euler_angles(-0.2, 0.0, 0.0);
-                                } else {
-                                    self.ik_target_pose.translation.vector[0] -= 0.05;
-                                }
-                                self.update_ik_target();
-                            }
-                            Key::F => {
-                                if mods.contains(glfw::modifiers::Shift) {
-                                    self.ik_target_pose.rotation *=
-                                        na::UnitQuaternion::from_euler_angles(0.2, 0.0, 0.0);
-                                } else {
-                                    self.ik_target_pose.translation.vector[0] += 0.05;
-                                }
-                                self.update_ik_target();
-                            }
-                            Key::I => {
-                                self.reset_colliding_link_colors();
-                                let result =
-                                    self.planner.solve_ik(&mut self.arm, &self.ik_target_pose);
-                                if result.is_ok() {
-                                    self.update_robot();
-                                } else {
-                                    println!("fail!!");
-                                }
-                            }
-                            Key::G => {
-                                self.reset_colliding_link_colors();
-                                match self.planner.plan_with_ik(
-                                    &mut self.arm,
-                                    &self.ik_target_pose,
-                                    &self.obstacles,
-                                ) {
-                                    Ok(mut plan) => {
-                                        plan.reverse();
-                                        plans = gear::interpolate(&plan, 5.0, 0.1)
-                                            .unwrap()
-                                            .into_iter()
-                                            .map(|point| point.position)
-                                            .collect();
-                                    }
-                                    Err(error) => {
-                                        println!("failed to reach!! {}", error);
-                                    }
-                                };
-                            }
-                            Key::R => {
-                                self.reset_colliding_link_colors();
-                                gear::set_random_joint_angles(&mut self.arm).unwrap();
-                                self.update_robot();
-                            }
-                            Key::C => {
-                                self.reset_colliding_link_colors();
-                                self.colliding_link_names =
-                                    self.planner.colliding_link_names(&self.obstacles);
-                                for name in &self.colliding_link_names {
-                                    println!("{}", name);
-                                    self.viewer.set_temporal_color(name, 0.8, 0.8, 0.6);
-                                }
-                                println!("===========");
-                            }
-                            Key::V => {
-                                is_collide_show = !is_collide_show;
-                                let ref_robot = self.planner.urdf_robot().as_ref().unwrap();
-                                self.viewer.remove_robot(ref_robot);
-                                self.viewer.add_robot_with_base_dir_and_collision_flag(
-                                    ref_robot,
-                                    None,
-                                    is_collide_show,
-                                );
-                                self.viewer.update(&self.planner);
-                            }
-                            _ => {}
+                            self.update_ik_target();
                         }
-                    }
+                        Key::Down => {
+                            if mods.contains(glfw::modifiers::Shift) {
+                                self.ik_target_pose.rotation *=
+                                    na::UnitQuaternion::from_euler_angles(0.0, 0.0, -0.2);
+                            } else {
+                                self.ik_target_pose.translation.vector[2] -= 0.05;
+                            }
+                            self.update_ik_target();
+                        }
+                        Key::Left => {
+                            if mods.contains(glfw::modifiers::Shift) {
+                                self.ik_target_pose.rotation *=
+                                    na::UnitQuaternion::from_euler_angles(0.0, 0.2, -0.0);
+                            } else {
+                                self.ik_target_pose.translation.vector[1] += 0.05;
+                            }
+                            self.update_ik_target();
+                        }
+                        Key::Right => {
+                            if mods.contains(glfw::modifiers::Shift) {
+                                self.ik_target_pose.rotation *=
+                                    na::UnitQuaternion::from_euler_angles(0.0, -0.2, 0.0);
+                            } else {
+                                self.ik_target_pose.translation.vector[1] -= 0.05;
+                            }
+                            self.update_ik_target();
+                        }
+                        Key::B => {
+                            if mods.contains(glfw::modifiers::Shift) {
+                                self.ik_target_pose.rotation *=
+                                    na::UnitQuaternion::from_euler_angles(-0.2, 0.0, 0.0);
+                            } else {
+                                self.ik_target_pose.translation.vector[0] -= 0.05;
+                            }
+                            self.update_ik_target();
+                        }
+                        Key::F => {
+                            if mods.contains(glfw::modifiers::Shift) {
+                                self.ik_target_pose.rotation *=
+                                    na::UnitQuaternion::from_euler_angles(0.2, 0.0, 0.0);
+                            } else {
+                                self.ik_target_pose.translation.vector[0] += 0.05;
+                            }
+                            self.update_ik_target();
+                        }
+                        Key::I => {
+                            self.reset_colliding_link_colors();
+                            let result = self.planner.solve_ik(&mut self.arm, &self.ik_target_pose);
+                            if result.is_ok() {
+                                self.update_robot();
+                            } else {
+                                println!("fail!!");
+                            }
+                        }
+                        Key::G => {
+                            self.reset_colliding_link_colors();
+                            match self.planner.plan_with_ik(
+                                &mut self.arm,
+                                &self.ik_target_pose,
+                                &self.obstacles,
+                            ) {
+                                Ok(mut plan) => {
+                                    plan.reverse();
+                                    plans = gear::interpolate(&plan, 5.0, 0.1)
+                                        .unwrap()
+                                        .into_iter()
+                                        .map(|point| point.position)
+                                        .collect();
+                                }
+                                Err(error) => {
+                                    println!("failed to reach!! {}", error);
+                                }
+                            };
+                        }
+                        Key::R => {
+                            self.reset_colliding_link_colors();
+                            gear::set_random_joint_angles(&mut self.arm).unwrap();
+                            self.update_robot();
+                        }
+                        Key::C => {
+                            self.reset_colliding_link_colors();
+                            self.colliding_link_names =
+                                self.planner.colliding_link_names(&self.obstacles);
+                            for name in &self.colliding_link_names {
+                                println!("{}", name);
+                                self.viewer.set_temporal_color(name, 0.8, 0.8, 0.6);
+                            }
+                            println!("===========");
+                        }
+                        Key::V => {
+                            is_collide_show = !is_collide_show;
+                            let ref_robot = self.planner.urdf_robot().as_ref().unwrap();
+                            self.viewer.remove_robot(ref_robot);
+                            self.viewer.add_robot_with_base_dir_and_collision_flag(
+                                ref_robot,
+                                None,
+                                is_collide_show,
+                            );
+                            self.viewer.update(&self.planner);
+                        }
+                        _ => {}
+                    },
                     _ => {}
                 }
             }
@@ -227,7 +231,7 @@ fn main() {
         .unwrap()
         .collision_check_margin(0.01)
         .finalize();
-    let solver = gear::JacobianIKSolverBuilder::<f64>::new()
+    let solver = gear::JacobianIKSolverBuilder::new()
         .num_max_try(1000)
         .allowable_target_distance(0.01)
         .move_epsilon(0.00001)

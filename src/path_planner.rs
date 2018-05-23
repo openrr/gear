@@ -14,8 +14,9 @@ See the License for the specific language governing permissions and
 limitations under the License.
 */
 use k;
-use ncollide::shape::Compound3;
 use na;
+use ncollide::shape::Compound3;
+use num_traits;
 use rrt;
 use std::path::Path;
 use urdf_rs;
@@ -25,18 +26,19 @@ use errors::*;
 use funcs::*;
 
 /// Collision Avoidance Path Planner
-pub struct JointPathPlanner<R>
+pub struct JointPathPlanner<N, R>
 where
-    R: k::LinkContainer<f64>,
+    R: k::LinkContainer<N>,
+    N: na::Real,
 {
     /// Instance of `k::LinkContainer` to check the collision
     pub collision_check_robot: R,
     /// Collision checker
-    pub collision_checker: CollisionChecker<f64>,
+    pub collision_checker: CollisionChecker<N>,
     /// Unit length for searching
     ///
     /// If the value is large, the path become sparse.
-    pub step_length: f64,
+    pub step_length: N,
     /// Max num of RRT search loop
     pub max_try: usize,
     /// Num of path smoothing trials
@@ -45,15 +47,16 @@ where
     pub urdf_robot: Option<urdf_rs::Robot>,
 }
 
-impl<R> JointPathPlanner<R>
+impl<N, R> JointPathPlanner<N, R>
 where
-    R: k::LinkContainer<f64>,
+    R: k::LinkContainer<N>,
+    N: na::Real + num_traits::Float,
 {
     /// Create `JointPathPlanner`
     pub fn new(
         collision_check_robot: R,
-        collision_checker: CollisionChecker<f64>,
-        step_length: f64,
+        collision_checker: CollisionChecker<N>,
+        step_length: N,
         max_try: usize,
         num_smoothing: usize,
     ) -> Self {
@@ -70,11 +73,11 @@ where
     pub fn is_feasible<K>(
         &mut self,
         using_joints: &mut K,
-        joint_angles: &[f64],
-        objects: &Compound3<f64>,
+        joint_angles: &[N],
+        objects: &Compound3<N>,
     ) -> bool
     where
-        K: k::JointContainer<f64>,
+        K: k::JointContainer<N>,
     {
         if using_joints.set_joint_angles(joint_angles).is_err() {
             return false;
@@ -82,21 +85,20 @@ where
         !self.has_any_colliding(objects)
     }
     /// Check if there are any colliding links
-    pub fn has_any_colliding(&self, objects: &Compound3<f64>) -> bool {
+    pub fn has_any_colliding(&self, objects: &Compound3<N>) -> bool {
         for shape in objects.shapes() {
             if self.collision_checker.has_any_colliding(
                 &self.collision_check_robot,
                 &*shape.1,
                 &shape.0,
-            )
-            {
+            ) {
                 return true;
             }
         }
         false
     }
     /// Get the names of colliding links
-    pub fn colliding_link_names(&self, objects: &Compound3<f64>) -> Vec<String> {
+    pub fn colliding_link_names(&self, objects: &Compound3<N>) -> Vec<String> {
         let mut ret = Vec::new();
         for shape in objects.shapes() {
             let mut colliding_names = self.collision_checker.colliding_link_names(
@@ -120,12 +122,12 @@ where
     pub fn plan<K>(
         &mut self,
         using_joints: &mut K,
-        start_angles: &[f64],
-        goal_angles: &[f64],
-        objects: &Compound3<f64>,
-    ) -> Result<Vec<Vec<f64>>>
+        start_angles: &[N],
+        goal_angles: &[N],
+        objects: &Compound3<N>,
+    ) -> Result<Vec<Vec<N>>>
     where
-        K: k::JointContainer<f64>,
+        K: k::JointContainer<N>,
     {
         let limits = using_joints.joint_limits();
         let step_length = self.step_length;
@@ -141,7 +143,7 @@ where
         let mut path = match rrt::dual_rrt_connect(
             start_angles,
             goal_angles,
-            |angles: &[f64]| self.is_feasible(using_joints, angles, objects),
+            |angles: &[N]| self.is_feasible(using_joints, angles, objects),
             || generate_random_joint_angles_from_limits(&limits),
             step_length,
             max_try,
@@ -155,7 +157,7 @@ where
         let num_smoothing = self.num_smoothing;
         rrt::smooth_path(
             &mut path,
-            |angles: &[f64]| self.is_feasible(using_joints, angles, objects),
+            |angles: &[N]| self.is_feasible(using_joints, angles, objects),
             step_length,
             num_smoothing,
         );
@@ -163,12 +165,13 @@ where
     }
 }
 
-impl<R> k::LinkContainer<f64> for JointPathPlanner<R>
+impl<N, R> k::LinkContainer<N> for JointPathPlanner<N, R>
 where
-    R: k::LinkContainer<f64>,
+    R: k::LinkContainer<N>,
+    N: na::Real,
 {
     /// Calculate the transforms of all of the links
-    fn link_transforms(&self) -> Vec<na::Isometry3<f64>> {
+    fn link_transforms(&self) -> Vec<na::Isometry3<N>> {
         self.collision_check_robot.link_transforms()
     }
 
@@ -179,42 +182,44 @@ where
 }
 
 /// Builder pattern to create `JointPathPlanner`
-pub struct JointPathPlannerBuilder<R>
+pub struct JointPathPlannerBuilder<N, R>
 where
-    R: k::LinkContainer<f64>,
+    R: k::LinkContainer<N>,
+    N: na::Real,
 {
     collision_check_robot: R,
-    collision_checker: CollisionChecker<f64>,
-    step_length: f64,
+    collision_checker: CollisionChecker<N>,
+    step_length: N,
     max_try: usize,
     num_smoothing: usize,
-    collision_check_margin: Option<f64>,
+    collision_check_margin: Option<N>,
     urdf_robot: Option<urdf_rs::Robot>,
 }
 
-impl<R> JointPathPlannerBuilder<R>
+impl<N, R> JointPathPlannerBuilder<N, R>
 where
-    R: k::LinkContainer<f64>,
+    R: k::LinkContainer<N>,
+    N: na::Real + num_traits::Float,
 {
     /// Create from components
     ///
     /// There are also some utility functions to create from urdf
-    pub fn new(collision_check_robot: R, collision_checker: CollisionChecker<f64>) -> Self {
+    pub fn new(collision_check_robot: R, collision_checker: CollisionChecker<N>) -> Self {
         JointPathPlannerBuilder {
             collision_check_robot: collision_check_robot,
             collision_checker: collision_checker,
-            step_length: 0.1,
+            step_length: na::convert(0.1),
             max_try: 5000,
             num_smoothing: 100,
             collision_check_margin: None,
             urdf_robot: None,
         }
     }
-    pub fn collision_check_margin(mut self, length: f64) -> Self {
+    pub fn collision_check_margin(mut self, length: N) -> Self {
         self.collision_check_margin = Some(length);
         self
     }
-    pub fn step_length(mut self, step_length: f64) -> Self {
+    pub fn step_length(mut self, step_length: N) -> Self {
         self.step_length = step_length;
         self
     }
@@ -226,7 +231,7 @@ where
         self.num_smoothing = num_smoothing;
         self
     }
-    pub fn finalize(mut self) -> JointPathPlanner<R> {
+    pub fn finalize(mut self) -> JointPathPlanner<N, R> {
         let mut planner = JointPathPlanner::new(
             self.collision_check_robot,
             self.collision_checker,
@@ -242,12 +247,13 @@ where
     }
 }
 
-impl<R> JointPathPlannerBuilder<R>
+impl<N, R> JointPathPlannerBuilder<N, R>
 where
-    R: k::urdf::FromUrdf + k::LinkContainer<f64>,
+    R: k::urdf::FromUrdf + k::LinkContainer<N>,
+    N: na::Real,
 {
     /// Try to create `JointPathPlannerBuilder` instance from URDF file and end link name
-    pub fn from_urdf_file<P>(file: P) -> Result<JointPathPlannerBuilder<R>>
+    pub fn from_urdf_file<P>(file: P) -> Result<JointPathPlannerBuilder<N, R>>
     where
         P: AsRef<Path>,
     {
@@ -255,24 +261,25 @@ where
         get_joint_path_planner_builder_from_urdf(robot)
     }
     /// Try to create `JointPathPlannerBuilder` instance from `urdf_rs::Robot` instance
-    pub fn from_urdf_robot<P>(robot: urdf_rs::Robot) -> Result<JointPathPlannerBuilder<R>> {
+    pub fn from_urdf_robot<P>(robot: urdf_rs::Robot) -> Result<JointPathPlannerBuilder<N, R>> {
         get_joint_path_planner_builder_from_urdf(robot)
     }
 }
 
-fn get_joint_path_planner_builder_from_urdf<R>(
+fn get_joint_path_planner_builder_from_urdf<N, R>(
     urdf_robot: urdf_rs::Robot,
-) -> Result<JointPathPlannerBuilder<R>>
+) -> Result<JointPathPlannerBuilder<N, R>>
 where
-    R: k::urdf::FromUrdf + k::LinkContainer<f64>,
+    R: k::urdf::FromUrdf + k::LinkContainer<N>,
+    N: na::Real,
 {
-    const DEFAULT_MARGIN: f64 = 0.0;
-    let collision_checker = CollisionChecker::from_urdf_robot(&urdf_robot, DEFAULT_MARGIN);
+    let default_margin = na::convert(0.0);
+    let collision_checker = CollisionChecker::from_urdf_robot(&urdf_robot, default_margin);
     let collision_check_robot = R::from_urdf_robot(&urdf_robot);
     Ok(JointPathPlannerBuilder {
         collision_check_robot,
         collision_checker,
-        step_length: 0.1,
+        step_length: na::convert(0.1),
         max_try: 5000,
         num_smoothing: 100,
         collision_check_margin: None,
@@ -280,19 +287,18 @@ where
     })
 }
 
-pub type DefaultJointPathPlanner<T> = JointPathPlanner<k::LinkTree<T>>;
-pub type DefaultJointPathPlannerBuilder<T> = JointPathPlannerBuilder<k::LinkTree<T>>;
-
+pub type DefaultJointPathPlanner<N> = JointPathPlanner<N, k::LinkTree<N>>;
+pub type DefaultJointPathPlannerBuilder<N> = JointPathPlannerBuilder<N, k::LinkTree<N>>;
 
 #[cfg(test)]
 mod tests {
     use super::*;
-    use urdf_rs;
-    use na;
-    use ncollide::shape::Cuboid;
-    use na::{Isometry3, Vector3};
     use k::JointContainer;
     use k::urdf::FromUrdf;
+    use na;
+    use na::{Isometry3, Vector3};
+    use ncollide::shape::Cuboid;
+    use urdf_rs;
 
     #[test]
     fn collision_check() {
