@@ -16,6 +16,10 @@ limitations under the License.
 
 extern crate gear;
 extern crate nalgebra as na;
+extern crate ncollide3d;
+
+use gear::FromUrdf;
+use ncollide3d::shape::Compound;
 
 fn main() {
     // Create path planner with loading urdf file and set end link name
@@ -36,8 +40,7 @@ fn main() {
     let mut arm = planner.create_arm("l_wrist2").unwrap();
 
     // Create obstacles
-    let obstacles =
-        gear::create_compound_from_urdf("obstacles.urdf").expect("obstacle file not found");
+    let obstacles = Compound::from_urdf_file("obstacles.urdf").expect("obstacle file not found");
 
     // Set IK target transformation
     let mut ik_target_pose = na::Isometry3::from_parts(

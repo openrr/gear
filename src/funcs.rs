@@ -34,26 +34,24 @@ where
     if angles.len() != limits.len() {
         return Err(Error::from("size mismatch of input angles and limits"));
     }
-    Ok(
-        limits
-            .iter()
-            .zip(angles.iter())
-            .map(|(range, angle)| match *range {
-                Some(ref range) => {
-                    if *angle > range.max {
-                        range.max
+    Ok(limits
+        .iter()
+        .zip(angles.iter())
+        .map(|(range, angle)| match *range {
+            Some(ref range) => {
+                if *angle > range.max {
+                    range.max
+                } else {
+                    if *angle < range.min {
+                        range.min
                     } else {
-                        if *angle < range.min {
-                            range.min
-                        } else {
-                            *angle
-                        }
+                        *angle
                     }
                 }
-                None => *angle,
-            })
-            .collect(),
-    )
+            }
+            None => *angle,
+        })
+        .collect())
 }
 
 /// Generate random joint angles from the optional limits
@@ -71,7 +69,6 @@ where
         })
         .collect()
 }
-
 
 /// Find the nearest angle on is for the joints wihout limits
 pub fn modify_to_nearest_angle<T>(vec1: &[T], vec2: &mut [T], limits: &Vec<Option<k::Range<T>>>)
@@ -136,16 +133,15 @@ where
 }
 
 /// Set random joint angles
-pub fn set_random_joint_angles<T, K>(robot: &mut K) -> ::std::result::Result<(), k::JointError>
+pub fn set_random_joint_angles<T>(
+    robot: &mut impl k::HasJoints<T>,
+) -> ::std::result::Result<(), k::JointError>
 where
-    K: k::JointContainer<T>,
     T: Real,
 {
     let limits = robot.joint_limits();
     robot.set_joint_angles(&generate_random_joint_angles_from_limits(&limits))
 }
-
-
 
 #[cfg(test)]
 mod tests {

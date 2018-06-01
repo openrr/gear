@@ -15,7 +15,7 @@ limitations under the License.
 */
 //! # Motion Planning Library for Robotics
 //!
-//! Get the collision free trajectory of joint angles. `ncollide` is used to check the
+//! Get the collision free trajectory of joint angles. `ncollide3d` is used to check the
 //! collision between the robot and the environment.
 //!
 extern crate assimp;
@@ -23,7 +23,7 @@ extern crate k;
 #[macro_use]
 extern crate log;
 extern crate nalgebra as na;
-extern crate ncollide;
+extern crate ncollide3d;
 extern crate num_traits;
 extern crate rand;
 extern crate rrt;

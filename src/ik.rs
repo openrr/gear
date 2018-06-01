@@ -14,7 +14,7 @@ See the License for the specific language governing permissions and
 limitations under the License.
 */
 
-use k::{self, InverseKinematicsSolver};
+use k::{self, EndTransform, HasJoints, InverseKinematicsSolver};
 use na::{self, Real};
 
 use funcs::*;
@@ -58,8 +58,7 @@ where
         target_pose: &na::Isometry3<T>,
     ) -> ::std::result::Result<T, k::IKError>
     where
-        K: k::KinematicChain<T>,
-        T: Real,
+        K: HasJoints<T> + EndTransform<T>,
     {
         let mut result = Err(k::IKError::NotConverged);
         let limits = arm.joint_limits();
@@ -73,7 +72,7 @@ where
             modify_to_nearest_angle(&initial_angles, &mut new_angles, &limits);
             arm.set_joint_angles(&new_angles)?;
         }
-// failed
+        // failed
         arm.set_joint_angles(&initial_angles)?;
         result
     }

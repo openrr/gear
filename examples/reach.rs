@@ -18,24 +18,25 @@ extern crate gear;
 extern crate glfw;
 extern crate k;
 extern crate nalgebra as na;
-extern crate ncollide;
+extern crate ncollide3d;
 extern crate urdf_rs;
 extern crate urdf_viz;
 
+use gear::FromUrdf;
 use glfw::{Action, Key, WindowEvent};
-use k::JointContainer;
-use ncollide::shape::Compound3;
+use k::HasJoints;
+use ncollide3d::shape::Compound;
 
 struct CollisionAvoidApp<I>
 where
     I: gear::InverseKinematicsSolver<f64>,
 {
     planner: gear::JointPathPlannerWithIK<f64, I>,
-    obstacles: Compound3<f64>,
+    obstacles: Compound<f64>,
     ik_target_pose: na::Isometry3<f64>,
     colliding_link_names: Vec<String>,
     viewer: urdf_viz::Viewer,
-    arm: k::LinkChain<f64>,
+    arm: k::Manipulator<f64>,
 }
 
 impl<I> CollisionAvoidApp<I>
@@ -49,7 +50,7 @@ where
 
         let urdf_obstacles =
             urdf_rs::utils::read_urdf_or_xacro("obstacles.urdf").expect("obstacle file not found");
-        let obstacles = gear::create_compound_from_urdf_robot(&urdf_obstacles);
+        let obstacles = Compound::from_urdf_robot(&urdf_obstacles);
         viewer.add_robot(&urdf_obstacles);
 
         let ik_target_pose = na::Isometry3::from_parts(
@@ -105,7 +106,7 @@ where
                 match event.value {
                     WindowEvent::Key(code, _, Action::Press, mods) => match code {
                         Key::Up => {
-                            if mods.contains(glfw::modifiers::Shift) {
+                            if mods.contains(glfw::Modifiers::Shift) {
                                 self.ik_target_pose.rotation *=
                                     na::UnitQuaternion::from_euler_angles(0.0, 0.0, 0.2);
                             } else {
@@ -114,7 +115,7 @@ where
                             self.update_ik_target();
                         }
                         Key::Down => {
-                            if mods.contains(glfw::modifiers::Shift) {
+                            if mods.contains(glfw::Modifiers::Shift) {
                                 self.ik_target_pose.rotation *=
                                     na::UnitQuaternion::from_euler_angles(0.0, 0.0, -0.2);
                             } else {
@@ -123,7 +124,7 @@ where
                             self.update_ik_target();
                         }
                         Key::Left => {
-                            if mods.contains(glfw::modifiers::Shift) {
+                            if mods.contains(glfw::Modifiers::Shift) {
                                 self.ik_target_pose.rotation *=
                                     na::UnitQuaternion::from_euler_angles(0.0, 0.2, -0.0);
                             } else {
@@ -132,7 +133,7 @@ where
                             self.update_ik_target();
                         }
                         Key::Right => {
-                            if mods.contains(glfw::modifiers::Shift) {
+                            if mods.contains(glfw::Modifiers::Shift) {
                                 self.ik_target_pose.rotation *=
                                     na::UnitQuaternion::from_euler_angles(0.0, -0.2, 0.0);
                             } else {
@@ -141,7 +142,7 @@ where
                             self.update_ik_target();
                         }
                         Key::B => {
-                            if mods.contains(glfw::modifiers::Shift) {
+                            if mods.contains(glfw::Modifiers::Shift) {
                                 self.ik_target_pose.rotation *=
                                     na::UnitQuaternion::from_euler_angles(-0.2, 0.0, 0.0);
                             } else {
@@ -150,7 +151,7 @@ where
                             self.update_ik_target();
                         }
                         Key::F => {
-                            if mods.contains(glfw::modifiers::Shift) {
+                            if mods.contains(glfw::Modifiers::Shift) {
                                 self.ik_target_pose.rotation *=
                                     na::UnitQuaternion::from_euler_angles(0.2, 0.0, 0.0);
                             } else {

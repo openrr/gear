@@ -16,12 +16,15 @@ limitations under the License.
 use assimp;
 use k;
 use na::{self, Isometry3, Real, Translation3, UnitQuaternion, Vector3};
-use ncollide::ncollide_geometry::query::Proximity;
-use ncollide::query;
-use ncollide::shape::{Ball, Cuboid3, Cylinder, Shape3, ShapeHandle3, TriMesh, Compound3};
-use urdf_rs;
+use ncollide3d;
+use ncollide3d::procedural::IndexBuffer::{Split, Unified};
+use ncollide3d::query;
+use ncollide3d::query::Proximity;
+use ncollide3d::shape::{Ball, Compound, Cuboid, Cylinder, Shape, ShapeHandle, TriMesh};
+use ncollide3d::transformation::ToTriMesh;
 use std::collections::HashMap;
 use std::path::Path;
+use urdf_rs;
 
 use errors::*;
 
@@ -31,15 +34,11 @@ where
 {
     na::convert(Isometry3::from_parts(
         Translation3::new(pose.xyz[0], pose.xyz[1], pose.xyz[2]),
-        UnitQuaternion::from_euler_angles(
-            pose.rpy[0],
-            pose.rpy[1],
-            pose.rpy[2],
-        ),
+        UnitQuaternion::from_euler_angles(pose.rpy[0], pose.rpy[1], pose.rpy[2]),
     ))
 }
 
-fn load_mesh<P, T>(filename: P, scale: &[f64]) -> Result<TriMesh<na::Point3<T>>>
+fn load_mesh<P, T>(filename: P, scale: &[f64]) -> Result<TriMesh<T>>
 where
     P: AsRef<Path>,
     T: Real,
@@ -47,23 +46,20 @@ where
     let mut importer = assimp::Importer::new();
     importer.pre_transform_vertices(|x| x.enable = true);
     importer.collada_ignore_up_direction(true);
-    let file_string = filename.as_ref().to_str().ok_or(
-        "faild to get string from path",
-    )?;
-    Ok(convert_assimp_scene_to_ncollide_mesh(
+    let file_string = filename
+        .as_ref()
+        .to_str()
+        .ok_or("faild to get string from path")?;
+    Ok(assimp_scene_to_ncollide_mesh(
         importer.read_file(file_string)?,
         scale,
     ))
 }
 
-fn convert_assimp_scene_to_ncollide_mesh<T>(
-    scene: assimp::Scene,
-    scale: &[f64],
-) -> TriMesh<na::Point3<T>>
+fn assimp_scene_to_ncollide_mesh<T>(scene: assimp::Scene, scale: &[f64]) -> TriMesh<T>
 where
     T: Real,
 {
-    use std;
     let mut vertices = Vec::new();
     let mut indices = Vec::new();
     let mut last_index: usize = 0;
@@ -75,55 +71,62 @@ where
                 na::convert(v.z as f64 * scale[2]),
             )
         }));
-        indices.extend(mesh.face_iter().filter_map(|f| if f.num_indices == 3 {
-            Some(na::Point3::<usize>::new(
-                f[0] as usize + last_index,
-                f[1] as usize + last_index,
-                f[2] as usize + last_index,
-            ))
-        } else {
-            None
+        indices.extend(mesh.face_iter().filter_map(|f| {
+            if f.num_indices == 3 {
+                Some(na::Point3::<usize>::new(
+                    f[0] as usize + last_index,
+                    f[1] as usize + last_index,
+                    f[2] as usize + last_index,
+                ))
+            } else {
+                None
+            }
         }));
         last_index = vertices.len() as usize;
     }
-    TriMesh::new(
-        std::sync::Arc::new(vertices),
-        std::sync::Arc::new(indices),
-        None,
-        None,
-    )
+    TriMesh::new(vertices, indices, None)
 }
 
-fn create_collision_model<T>(
+fn urdf_geometry_to_shape_handle<T>(
     collision_geometry: &urdf_rs::Geometry,
     base_dir: Option<&Path>,
-) -> Option<ShapeHandle3<T>>
+) -> Option<ShapeHandle<T>>
 where
     T: Real,
 {
     match *collision_geometry {
         urdf_rs::Geometry::Box { ref size } => {
-            let cube = Cuboid3::new(Vector3::new(
+            let cube = Cuboid::new(Vector3::new(
                 na::convert(size[0] * 0.5),
                 na::convert(size[1] * 0.5),
                 na::convert(size[2] * 0.5),
             ));
-            Some(ShapeHandle3::new(cube))
+            Some(ShapeHandle::new(cube))
         }
         urdf_rs::Geometry::Cylinder { radius, length } => {
             let y_cylinder = Cylinder::new(na::convert(length * 0.5), na::convert(radius));
-            Some(ShapeHandle3::new(Compound3::new(vec![
+            let tri_mesh =
+                ncollide3d::transformation::convex_hull(&y_cylinder.to_trimesh(30).coords);
+            let ind = match tri_mesh.indices {
+                Unified(ind) => ind.into_iter()
+                    .map(|p| na::Point3::new(p[0] as usize, p[1] as usize, p[2] as usize))
+                    .collect(),
+                Split(_) => {
+                    panic!("convex_hull implemenataion has been changed by ncollide3d update?");
+                }
+            };
+            Some(ShapeHandle::new(Compound::new(vec![
                 (
                     na::convert(na::Isometry3::from_parts(
                         na::Translation3::new(0.0, 0.0, 0.0),
                         na::UnitQuaternion::from_euler_angles(1.57, 0.0, 0.0),
                     )),
-                    ShapeHandle3::new(y_cylinder)
+                    ShapeHandle::new(TriMesh::new(tri_mesh.coords, ind, tri_mesh.uvs)),
                 ),
             ])))
         }
         urdf_rs::Geometry::Sphere { radius } => {
-            Some(ShapeHandle3::new(Ball::new(na::convert(radius))))
+            Some(ShapeHandle::new(Ball::new(na::convert(radius))))
         }
         urdf_rs::Geometry::Mesh {
             ref filename,
@@ -136,7 +139,7 @@ where
                 return None;
             }
             match load_mesh(path, &scale) {
-                Ok(mesh) => Some(ShapeHandle3::new(mesh)),
+                Ok(mesh) => Some(ShapeHandle::new(mesh)),
                 Err(err) => {
                     error!("load_mesh {:?} failed: {}", path, err);
                     None
@@ -151,7 +154,7 @@ pub struct CollisionChecker<T>
 where
     T: Real,
 {
-    name_collision_model_map: HashMap<String, Vec<(ShapeHandle3<T>, na::Isometry3<T>)>>,
+    name_collision_model_map: HashMap<String, Vec<(ShapeHandle<T>, na::Isometry3<T>)>>,
     /// margin length for collision check
     pub prediction: T,
 }
@@ -162,7 +165,7 @@ where
 {
     /// Create CollisionChecker from HashMap
     pub fn new(
-        name_collision_model_map: HashMap<String, Vec<(ShapeHandle3<T>, na::Isometry3<T>)>>,
+        name_collision_model_map: HashMap<String, Vec<(ShapeHandle<T>, na::Isometry3<T>)>>,
         prediction: T,
     ) -> Self {
         CollisionChecker {
@@ -187,9 +190,8 @@ where
             let col_pose_vec = l.collision
                 .iter()
                 .filter_map(|collision| {
-                    create_collision_model(&collision.geometry, base_dir).map(
-                        |col| (col, from_urdf_pose(&collision.origin)),
-                    )
+                    urdf_geometry_to_shape_handle(&collision.geometry, base_dir)
+                        .map(|col| (col, from_urdf_pose(&collision.origin)))
                 })
                 .collect::<Vec<_>>();
             debug!("name={}, ln={}", l.name, col_pose_vec.len());
@@ -203,41 +205,32 @@ where
         }
     }
     /// Check if there are any colliding links
-    pub fn has_any_colliding<R>(
+    pub fn has_any_colliding(
         &self,
-        robot: &R,
-        target_shape: &Shape3<T>,
+        robot: &impl k::HasLinks<T>,
+        target_shape: &Shape<T>,
         target_pose: &na::Isometry3<T>,
-    ) -> bool
-    where
-        R: k::LinkContainer<T>,
-    {
+    ) -> bool {
         !self.colliding_link_names_with_first_return_flag(robot, target_shape, target_pose, true)
             .is_empty()
     }
     /// Returns the names which is colliding with the target shape/pose
-    pub fn colliding_link_names<R>(
+    pub fn colliding_link_names(
         &self,
-        robot: &R,
-        target_shape: &Shape3<T>,
+        robot: &impl k::HasLinks<T>,
+        target_shape: &Shape<T>,
         target_pose: &na::Isometry3<T>,
-    ) -> Vec<String>
-    where
-        R: k::LinkContainer<T>,
-    {
+    ) -> Vec<String> {
         self.colliding_link_names_with_first_return_flag(robot, target_shape, target_pose, false)
     }
 
-    fn colliding_link_names_with_first_return_flag<R>(
+    fn colliding_link_names_with_first_return_flag(
         &self,
-        robot: &R,
-        target_shape: &Shape3<T>,
+        robot: &impl k::HasLinks<T>,
+        target_shape: &Shape<T>,
         target_pose: &na::Isometry3<T>,
         first_return: bool,
-    ) -> Vec<String>
-    where
-        R: k::LinkContainer<T>,
-    {
+    ) -> Vec<String> {
         let mut names = Vec::new();
         for (trans, link_name) in robot.link_transforms().iter().zip(robot.link_names()) {
             match self.name_collision_model_map.get(&link_name) {
@@ -269,36 +262,39 @@ where
     }
 }
 
-/// Create `ncollide::shape::Compound3` from URDF file
+pub trait FromUrdf {
+    fn from_urdf_robot(robot: &urdf_rs::Robot) -> Self;
+    fn from_urdf_file<P>(path: P) -> ::std::result::Result<Self, urdf_rs::UrdfError>
+    where
+        Self: ::std::marker::Sized,
+        P: AsRef<Path>,
+    {
+        Ok(Self::from_urdf_robot(&urdf_rs::read_file(path)?))
+    }
+}
+
+/// Create `ncollide::shape::Compound` from URDF file
 ///
 /// The `<link>` elements are used as obstacles. set the origin/geometry of
 /// `<visual>` and `<collision>`. You can skip `<inertia>`.
-pub fn create_compound_from_urdf<P>(file: P) -> Result<Compound3<f64>>
-where
-    P: AsRef<Path>,
-{
-    let urdf_obstacles = urdf_rs::utils::read_urdf_or_xacro(file.as_ref())?;
-    Ok(create_compound_from_urdf_robot(&urdf_obstacles))
-}
-
-/// Create `ncollide::shape::Compound3` from `urdf_rs::Robot`
-pub fn create_compound_from_urdf_robot(urdf_obstacle: &urdf_rs::Robot) -> Compound3<f64> {
-    let compound_data = urdf_obstacle
-        .links
-        .iter()
-        .flat_map(|l| {
-            l.collision
-                .iter()
-                .map(|collision| match create_collision_model(
-                    &collision.geometry,
-                    None,
-                ) {
-                    Some(col) => Some((from_urdf_pose(&collision.origin), col)),
-                    None => None,
-                })
-                .collect::<Vec<_>>()
-        })
-        .filter_map(|col_tuple| col_tuple)
-        .collect::<Vec<_>>();
-    Compound3::new(compound_data)
+impl FromUrdf for Compound<f64> {
+    fn from_urdf_robot(urdf_obstacle: &urdf_rs::Robot) -> Self {
+        let compound_data = urdf_obstacle
+            .links
+            .iter()
+            .flat_map(|l| {
+                l.collision
+                    .iter()
+                    .map(|collision| {
+                        match urdf_geometry_to_shape_handle(&collision.geometry, None) {
+                            Some(col) => Some((from_urdf_pose(&collision.origin), col)),
+                            None => None,
+                        }
+                    })
+                    .collect::<Vec<_>>()
+            })
+            .filter_map(|col_tuple| col_tuple)
+            .collect::<Vec<_>>();
+        Compound::new(compound_data)
+    }
 }

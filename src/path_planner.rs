@@ -15,7 +15,7 @@ limitations under the License.
 */
 use k;
 use na;
-use ncollide::shape::Compound3;
+use ncollide3d::shape::Compound;
 use num_traits;
 use rrt;
 use std::path::Path;
@@ -28,10 +28,10 @@ use funcs::*;
 /// Collision Avoidance Path Planner
 pub struct JointPathPlanner<N, R>
 where
-    R: k::LinkContainer<N>,
+    R: k::HasLinks<N>,
     N: na::Real,
 {
-    /// Instance of `k::LinkContainer` to check the collision
+    /// Instance of `k::HasLinks` to check the collision
     pub collision_check_robot: R,
     /// Collision checker
     pub collision_checker: CollisionChecker<N>,
@@ -49,7 +49,7 @@ where
 
 impl<N, R> JointPathPlanner<N, R>
 where
-    R: k::LinkContainer<N>,
+    R: k::HasLinks<N>,
     N: na::Real + num_traits::Float,
 {
     /// Create `JointPathPlanner`
@@ -74,10 +74,10 @@ where
         &mut self,
         using_joints: &mut K,
         joint_angles: &[N],
-        objects: &Compound3<N>,
+        objects: &Compound<N>,
     ) -> bool
     where
-        K: k::JointContainer<N>,
+        K: k::HasJoints<N>,
     {
         if using_joints.set_joint_angles(joint_angles).is_err() {
             return false;
@@ -85,7 +85,7 @@ where
         !self.has_any_colliding(objects)
     }
     /// Check if there are any colliding links
-    pub fn has_any_colliding(&self, objects: &Compound3<N>) -> bool {
+    pub fn has_any_colliding(&self, objects: &Compound<N>) -> bool {
         for shape in objects.shapes() {
             if self.collision_checker.has_any_colliding(
                 &self.collision_check_robot,
@@ -98,7 +98,7 @@ where
         false
     }
     /// Get the names of colliding links
-    pub fn colliding_link_names(&self, objects: &Compound3<N>) -> Vec<String> {
+    pub fn colliding_link_names(&self, objects: &Compound<N>) -> Vec<String> {
         let mut ret = Vec::new();
         for shape in objects.shapes() {
             let mut colliding_names = self.collision_checker.colliding_link_names(
@@ -124,10 +124,10 @@ where
         using_joints: &mut K,
         start_angles: &[N],
         goal_angles: &[N],
-        objects: &Compound3<N>,
+        objects: &Compound<N>,
     ) -> Result<Vec<Vec<N>>>
     where
-        K: k::JointContainer<N>,
+        K: k::HasJoints<N>,
     {
         let limits = using_joints.joint_limits();
         let step_length = self.step_length;
@@ -165,9 +165,9 @@ where
     }
 }
 
-impl<N, R> k::LinkContainer<N> for JointPathPlanner<N, R>
+impl<N, R> k::HasLinks<N> for JointPathPlanner<N, R>
 where
-    R: k::LinkContainer<N>,
+    R: k::HasLinks<N>,
     N: na::Real,
 {
     /// Calculate the transforms of all of the links
@@ -184,7 +184,7 @@ where
 /// Builder pattern to create `JointPathPlanner`
 pub struct JointPathPlannerBuilder<N, R>
 where
-    R: k::LinkContainer<N>,
+    R: k::HasLinks<N>,
     N: na::Real,
 {
     collision_check_robot: R,
@@ -198,7 +198,7 @@ where
 
 impl<N, R> JointPathPlannerBuilder<N, R>
 where
-    R: k::LinkContainer<N>,
+    R: k::HasLinks<N>,
     N: na::Real + num_traits::Float,
 {
     /// Create from components
@@ -249,7 +249,7 @@ where
 
 impl<N, R> JointPathPlannerBuilder<N, R>
 where
-    R: k::urdf::FromUrdf + k::LinkContainer<N>,
+    R: k::urdf::FromUrdf + k::HasLinks<N>,
     N: na::Real,
 {
     /// Try to create `JointPathPlannerBuilder` instance from URDF file and end link name
@@ -270,7 +270,7 @@ fn get_joint_path_planner_builder_from_urdf<N, R>(
     urdf_robot: urdf_rs::Robot,
 ) -> Result<JointPathPlannerBuilder<N, R>>
 where
-    R: k::urdf::FromUrdf + k::LinkContainer<N>,
+    R: k::urdf::FromUrdf + k::HasLinks<N>,
     N: na::Real,
 {
     let default_margin = na::convert(0.0);
@@ -293,17 +293,17 @@ pub type DefaultJointPathPlannerBuilder<N> = JointPathPlannerBuilder<N, k::LinkT
 #[cfg(test)]
 mod tests {
     use super::*;
-    use k::JointContainer;
+    use k::HasJoints;
     use k::urdf::FromUrdf;
     use na;
     use na::{Isometry3, Vector3};
-    use ncollide::shape::Cuboid;
+    use ncollide3d::shape::Cuboid;
     use urdf_rs;
 
     #[test]
     fn collision_check() {
         let urdf_robot = urdf_rs::read_file("sample.urdf").unwrap();
-        let checker = CollisionChecker::from_urdf_robot(&urdf_robot, 0.05);
+        let checker = CollisionChecker::from_urdf_robot(&urdf_robot, 0.01);
 
         let target = Cuboid::new(Vector3::new(0.5, 1.0, 0.5));
         let target_pose = Isometry3::new(Vector3::new(0.9, 0.0, 0.0), na::zero());
@@ -333,7 +333,6 @@ mod tests {
         assert_eq!(
             names,
             vec![
-                "l_shoulder2",
                 "l_shoulder3",
                 "l_elbow1",
                 "l_wrist1",
