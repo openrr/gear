@@ -135,10 +135,14 @@ where
         let current_angles = using_joints.joint_angles();
         if !self.is_feasible(using_joints, start_angles, objects) {
             using_joints.set_joint_angles(&current_angles)?;
-            return Err(Error::Collision("Initialis colliding".to_owned()));
+            return Err(Error::Collision {
+                part: CollisionPart::Start,
+            });
         } else if !self.is_feasible(using_joints, goal_angles, objects) {
             using_joints.set_joint_angles(&current_angles)?;
-            return Err(Error::Collision("Goal is colliding".to_owned()));
+            return Err(Error::Collision {
+                part: CollisionPart::End,
+            });
         }
         let mut path = match rrt::dual_rrt_connect(
             start_angles,
@@ -293,8 +297,8 @@ pub type DefaultJointPathPlannerBuilder<N> = JointPathPlannerBuilder<N, k::LinkT
 #[cfg(test)]
 mod tests {
     use super::*;
-    use k::HasJoints;
     use k::urdf::FromUrdf;
+    use k::HasJoints;
     use na;
     use na::{Isometry3, Vector3};
     use ncollide3d::shape::Cuboid;

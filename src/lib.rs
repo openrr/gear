@@ -19,6 +19,8 @@ limitations under the License.
 //! collision between the robot and the environment.
 //!
 extern crate assimp;
+#[macro_use]
+extern crate failure;
 extern crate k;
 #[macro_use]
 extern crate log;

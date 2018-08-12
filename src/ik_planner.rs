@@ -74,12 +74,13 @@ where
     }
     pub fn create_arm(&self, end_link_name: &str) -> Result<k::Manipulator<T>> {
         let candidates = self.path_planner.collision_check_robot.link_names();
-        k::Manipulator::from_link_tree(end_link_name, &self.path_planner.collision_check_robot).ok_or(
-            Error::Other(format!(
-                "end link `{}` not found: candidates = {:?}",
-                end_link_name, candidates
-            )),
-        )
+        k::Manipulator::from_link_tree(end_link_name, &self.path_planner.collision_check_robot)
+            .ok_or(Error::Other {
+                error: format!(
+                    "end link `{}` not found: candidates = {:?}",
+                    end_link_name, candidates
+                ),
+            })
     }
     pub fn solve_ik<K>(&mut self, arm: &mut K, target_pose: &na::Isometry3<T>) -> Result<T>
     where
