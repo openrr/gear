@@ -70,7 +70,8 @@ where
     }
     fn update_robot(&mut self) {
         // this is hack to handle invalid mimic joints
-        let ja = self.planner
+        let ja = self
+            .planner
             .path_planner
             .collision_check_robot
             .joint_angles();

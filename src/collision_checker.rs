@@ -108,22 +108,21 @@ where
             let tri_mesh =
                 ncollide3d::transformation::convex_hull(&y_cylinder.to_trimesh(30).coords);
             let ind = match tri_mesh.indices {
-                Unified(ind) => ind.into_iter()
+                Unified(ind) => ind
+                    .into_iter()
                     .map(|p| na::Point3::new(p[0] as usize, p[1] as usize, p[2] as usize))
                     .collect(),
                 Split(_) => {
                     panic!("convex_hull implemenataion has been changed by ncollide3d update?");
                 }
             };
-            Some(ShapeHandle::new(Compound::new(vec![
-                (
-                    na::convert(na::Isometry3::from_parts(
-                        na::Translation3::new(0.0, 0.0, 0.0),
-                        na::UnitQuaternion::from_euler_angles(1.57, 0.0, 0.0),
-                    )),
-                    ShapeHandle::new(TriMesh::new(tri_mesh.coords, ind, tri_mesh.uvs)),
-                ),
-            ])))
+            Some(ShapeHandle::new(Compound::new(vec![(
+                na::convert(na::Isometry3::from_parts(
+                    na::Translation3::new(0.0, 0.0, 0.0),
+                    na::UnitQuaternion::from_euler_angles(1.57, 0.0, 0.0),
+                )),
+                ShapeHandle::new(TriMesh::new(tri_mesh.coords, ind, tri_mesh.uvs)),
+            )])))
         }
         urdf_rs::Geometry::Sphere { radius } => {
             Some(ShapeHandle::new(Ball::new(na::convert(radius))))
@@ -187,7 +186,8 @@ where
     ) -> Self {
         let mut name_collision_model_map = HashMap::new();
         for l in &urdf_robot.links {
-            let col_pose_vec = l.collision
+            let col_pose_vec = l
+                .collision
                 .iter()
                 .filter_map(|collision| {
                     urdf_geometry_to_shape_handle(&collision.geometry, base_dir)
@@ -211,7 +211,8 @@ where
         target_shape: &Shape<T>,
         target_pose: &na::Isometry3<T>,
     ) -> bool {
-        !self.colliding_link_names_with_first_return_flag(robot, target_shape, target_pose, true)
+        !self
+            .colliding_link_names_with_first_return_flag(robot, target_shape, target_pose, true)
             .is_empty()
     }
     /// Returns the names which is colliding with the target shape/pose
