@@ -134,7 +134,7 @@ where
 
 /// Set random joint angles
 pub fn set_random_joint_angles<T>(
-    robot: &mut impl k::HasJoints<T>,
+    robot: &mut k::Robot<T>,
 ) -> ::std::result::Result<(), k::JointError>
 where
     T: Real,

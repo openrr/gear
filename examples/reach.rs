@@ -24,7 +24,6 @@ extern crate urdf_viz;
 
 use gear::FromUrdf;
 use glfw::{Action, Key, WindowEvent};
-use k::HasJoints;
 use ncollide3d::shape::Compound;
 
 struct CollisionAvoidApp<I>
@@ -36,7 +35,8 @@ where
     ik_target_pose: na::Isometry3<f64>,
     colliding_link_names: Vec<String>,
     viewer: urdf_viz::Viewer,
-    arm: k::Manipulator<f64>,
+    arm: k::Robot<f64>,
+    end_link_name: String,
 }
 
 impl<I> CollisionAvoidApp<I>
@@ -57,7 +57,12 @@ where
             na::Translation3::new(0.40, 0.20, 0.3),
             na::UnitQuaternion::from_euler_angles(0.0, -0.1, 0.0),
         );
-        let arm = planner.create_arm(end_link_name).unwrap();
+        let arm;
+        {
+        let end_link = planner.path_planner.collision_check_robot.find_joint(end_link_name).expect(&format!("{} not found", end_link_name));
+        arm = k::Robot::from_end("arm", end_link);
+        }
+        let end_link_name = end_link_name.to_owned();
         viewer.add_axis_cylinders("ik_target", 0.3);
         CollisionAvoidApp {
             viewer,
@@ -66,6 +71,7 @@ where
             colliding_link_names: Vec::new(),
             planner,
             arm,
+            end_link_name,
         }
     }
     fn update_robot(&mut self) {
@@ -80,7 +86,8 @@ where
             .collision_check_robot
             .set_joint_angles(&ja)
             .unwrap();
-        self.viewer.update(&self.planner);
+        self.viewer
+            .update(&self.planner.path_planner.collision_check_robot);
     }
     fn update_ik_target(&mut self) {
         if let Some(obj) = self.viewer.scene_node_mut("ik_target") {
@@ -162,7 +169,7 @@ where
                         }
                         Key::I => {
                             self.reset_colliding_link_colors();
-                            let result = self.planner.solve_ik(&mut self.arm, &self.ik_target_pose);
+                            let result = self.planner.solve_ik(&self.end_link_name, &self.ik_target_pose);
                             if result.is_ok() {
                                 self.update_robot();
                             } else {
@@ -172,7 +179,7 @@ where
                         Key::G => {
                             self.reset_colliding_link_colors();
                             match self.planner.plan_with_ik(
-                                &mut self.arm,
+                                &self.end_link_name,
                                 &self.ik_target_pose,
                                 &self.obstacles,
                             ) {
@@ -213,7 +220,7 @@ where
                                 None,
                                 is_collide_show,
                             );
-                            self.viewer.update(&self.planner);
+                            self.viewer.update(&self.planner.path_planner.collision_check_robot);
                         }
                         _ => {}
                     },
@@ -228,7 +235,7 @@ fn main() {
     use std::env;
     env_logger::init().unwrap();
     let input_string = env::args().nth(1).unwrap_or("sample.urdf".to_owned());
-    let input_end_link = env::args().nth(2).unwrap_or("l_tool".to_owned());
+    let input_end_link = env::args().nth(2).unwrap_or("l_tool_fixed".to_owned());
     let planner = gear::JointPathPlannerBuilder::from_urdf_file(&input_string)
         .unwrap()
         .collision_check_margin(0.01)

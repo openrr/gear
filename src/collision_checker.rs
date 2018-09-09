@@ -15,7 +15,7 @@ limitations under the License.
 */
 use assimp;
 use k;
-use na::{self, Isometry3, Real, Translation3, UnitQuaternion, Vector3};
+use na::{self, Real, Vector3};
 use ncollide3d;
 use ncollide3d::procedural::IndexBuffer::{Split, Unified};
 use ncollide3d::query;
@@ -27,16 +27,6 @@ use std::path::Path;
 use urdf_rs;
 
 use errors::*;
-
-fn from_urdf_pose<T>(pose: &urdf_rs::Pose) -> Isometry3<T>
-where
-    T: Real,
-{
-    na::convert(Isometry3::from_parts(
-        Translation3::new(pose.xyz[0], pose.xyz[1], pose.xyz[2]),
-        UnitQuaternion::from_euler_angles(pose.rpy[0], pose.rpy[1], pose.rpy[2]),
-    ))
-}
 
 fn load_mesh<P, T>(filename: P, scale: &[f64]) -> Result<TriMesh<T>>
 where
@@ -185,18 +175,26 @@ where
         prediction: T,
     ) -> Self {
         let mut name_collision_model_map = HashMap::new();
+        let mut link_joint_map = HashMap::new();
+        for j in &urdf_robot.joints {
+            link_joint_map.insert(j.child.link.to_owned(), j.name.to_owned());
+        }
         for l in &urdf_robot.links {
             let col_pose_vec = l
                 .collision
                 .iter()
                 .filter_map(|collision| {
                     urdf_geometry_to_shape_handle(&collision.geometry, base_dir)
-                        .map(|col| (col, from_urdf_pose(&collision.origin)))
+                        .map(|col| (col, k::urdf::isometry_from(&collision.origin)))
                 })
                 .collect::<Vec<_>>();
             debug!("name={}, ln={}", l.name, col_pose_vec.len());
             if !col_pose_vec.is_empty() {
-                name_collision_model_map.insert(l.name.to_string(), col_pose_vec);
+                let name = match link_joint_map.get(&l.name) {
+                    Some(j) => j.to_owned(),
+                    None => k::urdf::ROOT_JOINT_NAME.to_owned(),
+                };
+                name_collision_model_map.insert(name, col_pose_vec);
             }
         }
         CollisionChecker {
@@ -207,7 +205,7 @@ where
     /// Check if there are any colliding links
     pub fn has_any_colliding(
         &self,
-        robot: &impl k::HasLinks<T>,
+        robot: &k::Robot<T>,
         target_shape: &Shape<T>,
         target_pose: &na::Isometry3<T>,
     ) -> bool {
@@ -218,7 +216,7 @@ where
     /// Returns the names which is colliding with the target shape/pose
     pub fn colliding_link_names(
         &self,
-        robot: &impl k::HasLinks<T>,
+        robot: &k::Robot<T>,
         target_shape: &Shape<T>,
         target_pose: &na::Isometry3<T>,
     ) -> Vec<String> {
@@ -227,13 +225,16 @@ where
 
     fn colliding_link_names_with_first_return_flag(
         &self,
-        robot: &impl k::HasLinks<T>,
+        robot: &k::Robot<T>,
         target_shape: &Shape<T>,
         target_pose: &na::Isometry3<T>,
         first_return: bool,
     ) -> Vec<String> {
         let mut names = Vec::new();
-        for (trans, link_name) in robot.link_transforms().iter().zip(robot.link_names()) {
+        robot.update_transforms();
+        for link in robot.iter() {
+            let trans = link.world_transform().unwrap();
+            let link_name = link.joint_name();
             match self.name_collision_model_map.get(&link_name) {
                 Some(obj_vec) => {
                     for obj in obj_vec {
@@ -288,7 +289,7 @@ impl FromUrdf for Compound<f64> {
                     .iter()
                     .map(|collision| {
                         match urdf_geometry_to_shape_handle(&collision.geometry, None) {
-                            Some(col) => Some((from_urdf_pose(&collision.origin), col)),
+                            Some(col) => Some((k::urdf::isometry_from(&collision.origin), col)),
                             None => None,
                         }
                     })

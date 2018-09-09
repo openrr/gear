@@ -36,9 +36,7 @@ fn main() {
     let solver = gear::RandomInitializeIKSolver::new(solver, 100);
     // Create path planner with IK solver
     let mut planner = gear::JointPathPlannerWithIK::new(planner, solver);
-    // Create kinematic chain from the end of the link
-    let mut arm = planner.create_arm("l_wrist2").unwrap();
-
+    let target_name = "l_tool_fixed";
     // Create obstacles
     let obstacles = Compound::from_urdf_file("obstacles.urdf").expect("obstacle file not found");
 
@@ -47,15 +45,15 @@ fn main() {
         na::Translation3::new(0.40, 0.20, 0.3),
         na::UnitQuaternion::from_euler_angles(0.0, -0.1, 0.0),
     );
-    // Plan the path, path is the vector of joint angles for root to "l_wrist2"
+    // Plan the path, path is the vector of joint angles for root to target_name
     let plan1 = planner
-        .plan_with_ik(&mut arm, &ik_target_pose, &obstacles)
+        .plan_with_ik(target_name, &ik_target_pose, &obstacles)
         .unwrap();
     println!("plan1 = {:?}", plan1);
     ik_target_pose.translation.vector[2] += 0.50;
     // plan the path from previous result
     let plan2 = planner
-        .plan_with_ik(&mut arm, &ik_target_pose, &obstacles)
+        .plan_with_ik(target_name, &ik_target_pose, &obstacles)
         .unwrap();
     println!("plan2 = {:?}", plan2);
 }
