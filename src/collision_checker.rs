@@ -175,10 +175,7 @@ where
         prediction: T,
     ) -> Self {
         let mut name_collision_model_map = HashMap::new();
-        let mut link_joint_map = HashMap::new();
-        for j in &urdf_robot.joints {
-            link_joint_map.insert(j.child.link.to_owned(), j.name.to_owned());
-        }
+        let link_joint_map = k::urdf::link_to_joint_map(&urdf_robot);
         for l in &urdf_robot.links {
             let col_pose_vec = l
                 .collision
@@ -205,7 +202,7 @@ where
     /// Check if there are any colliding links
     pub fn has_any_colliding(
         &self,
-        robot: &k::Robot<T>,
+        robot: &k::Chain<T>,
         target_shape: &Shape<T>,
         target_pose: &na::Isometry3<T>,
     ) -> bool {
@@ -216,7 +213,7 @@ where
     /// Returns the names which is colliding with the target shape/pose
     pub fn colliding_link_names(
         &self,
-        robot: &k::Robot<T>,
+        robot: &k::Chain<T>,
         target_shape: &Shape<T>,
         target_pose: &na::Isometry3<T>,
     ) -> Vec<String> {
@@ -225,7 +222,7 @@ where
 
     fn colliding_link_names_with_first_return_flag(
         &self,
-        robot: &k::Robot<T>,
+        robot: &k::Chain<T>,
         target_shape: &Shape<T>,
         target_pose: &na::Isometry3<T>,
         first_return: bool,
@@ -234,7 +231,7 @@ where
         robot.update_transforms();
         for link in robot.iter() {
             let trans = link.world_transform().unwrap();
-            let link_name = link.joint_name();
+            let link_name = link.name();
             match self.name_collision_model_map.get(&link_name) {
                 Some(obj_vec) => {
                     for obj in obj_vec {

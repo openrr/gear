@@ -35,7 +35,7 @@ where
     ik_target_pose: na::Isometry3<f64>,
     colliding_link_names: Vec<String>,
     viewer: urdf_viz::Viewer,
-    arm: k::Robot<f64>,
+    arm: k::SerialChain<f64>,
     end_link_name: String,
 }
 
@@ -59,8 +59,8 @@ where
         );
         let arm;
         {
-        let end_link = planner.path_planner.collision_check_robot.find_joint(end_link_name).expect(&format!("{} not found", end_link_name));
-        arm = k::Robot::from_end("arm", end_link);
+        let end_link = planner.path_planner.collision_check_robot.find(end_link_name).expect(&format!("{} not found", end_link_name));
+        arm = k::SerialChain::from_end(end_link);
         }
         let end_link_name = end_link_name.to_owned();
         viewer.add_axis_cylinders("ik_target", 0.3);
@@ -80,11 +80,11 @@ where
             .planner
             .path_planner
             .collision_check_robot
-            .joint_angles();
+            .joint_positions();
         self.planner
             .path_planner
             .collision_check_robot
-            .set_joint_angles(&ja)
+            .set_joint_positions(&ja)
             .unwrap();
         self.viewer
             .update(&self.planner.path_planner.collision_check_robot);
@@ -106,7 +106,7 @@ where
         let mut plans: Vec<Vec<f64>> = Vec::new();
         while self.viewer.render() {
             if !plans.is_empty() {
-                self.arm.set_joint_angles(&plans.pop().unwrap()).unwrap();
+                self.arm.set_joint_positions(&plans.pop().unwrap()).unwrap();
                 self.update_robot();
             }
 
@@ -169,7 +169,7 @@ where
                         }
                         Key::I => {
                             self.reset_colliding_link_colors();
-                            let result = self.planner.solve_ik(&self.end_link_name, &self.ik_target_pose);
+                            let result = self.planner.solve_ik(&self.arm, &self.ik_target_pose);
                             if result.is_ok() {
                                 self.update_robot();
                             } else {
@@ -198,7 +198,7 @@ where
                         }
                         Key::R => {
                             self.reset_colliding_link_colors();
-                            gear::set_random_joint_angles(&mut self.arm).unwrap();
+                            gear::set_random_joint_positions(&mut self.arm).unwrap();
                             self.update_robot();
                         }
                         Key::C => {

@@ -54,27 +54,26 @@ where
 {
     fn solve(
         &self,
-        end_link: &k::JointNode<T>,
+        arm: &k::SerialChain<T>,
         target_pose: &na::Isometry3<T>,
     ) -> ::std::result::Result<T, k::IKError> {
-        let mut result = Err(k::IKError::NotConverged {
+        let mut result = Err(k::IKError::NotConvergedError {
             error: "fail".to_owned(),
         });
-        let arm = k::Robot::from_end("tmp-arm", end_link);
-        let limits = arm.joint_limits();
-        let initial_angles = arm.joint_angles();
+        let limits = arm.limits();
+        let initial_angles = arm.joint_positions();
 
         for _ in 0..self.num_max_try {
-            result = self.solver.solve(end_link, target_pose);
+            result = self.solver.solve(arm, target_pose);
             if result.is_ok() {
                 return result;
             }
-            let mut new_angles = generate_random_joint_angles_from_limits(&limits);
+            let mut new_angles = generate_random_joint_positions_from_limits(&limits);
             modify_to_nearest_angle(&initial_angles, &mut new_angles, &limits);
-            arm.set_joint_angles(&new_angles)?;
+            arm.set_joint_positions(&new_angles)?;
         }
         // failed
-        arm.set_joint_angles(&initial_angles)?;
+        arm.set_joint_positions(&initial_angles)?;
         result
     }
 }

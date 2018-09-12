@@ -30,7 +30,7 @@ where
 {
     /// Joint Path Planner to be used to find collision free path
     ///
-    /// Currently, `JointPathPlanner<N, k::Robot<N>>` is used.
+    /// Currently, `JointPathPlanner<N, k::Chain<N>>` is used.
     pub path_planner: JointPathPlanner<T>,
     /// Inverse kinematics solver to find the goal joint angles
     pub ik_solver: I,
@@ -70,14 +70,9 @@ where
     pub fn urdf_robot(&self) -> &Option<urdf_rs::Robot> {
         &self.path_planner.urdf_robot
     }
-    pub fn solve_ik(&mut self, target_name: &str, target_pose: &na::Isometry3<T>) -> Result<T>
+    pub fn solve_ik(&mut self, arm: &k::SerialChain<T>, target_pose: &na::Isometry3<T>) -> Result<T>
     {
-        let end_link: &k::JointNode<T> = self
-            .path_planner
-            .collision_check_robot
-            .find_joint(target_name)
-            .ok_or(format!("{} not found", target_name))?;
-        Ok(self.ik_solver.solve(end_link, target_pose)?)
+        Ok(self.ik_solver.solve(arm, target_pose)?)
     }
     pub fn colliding_link_names(&self, objects: &Compound<T>) -> Vec<String> {
         self.path_planner.colliding_link_names(objects)
@@ -91,17 +86,17 @@ where
         let end_link: &k::JointNode<T> = self
             .path_planner
             .collision_check_robot
-            .find_joint(target_name)
+            .find(target_name)
             .ok_or(format!("{} not found", target_name))?;
-        let arm = k::Robot::from_end("temp", end_link);
-        let initial = arm.joint_angles();
-        let _ = self.ik_solver.solve(end_link, target_pose)?;
-        let goal = arm.joint_angles();
+        let arm = k::SerialChain::from_end(end_link);
+        let initial = arm.joint_positions();
+        let _ = self.ik_solver.solve(&arm, target_pose)?;
+        let goal = arm.joint_positions();
         self.path_planner.plan(&arm, &initial, &goal, objects)
     }
     pub fn plan_joints<K>(
         &mut self,
-        use_joints: &k::Robot<T>,
+        use_joints: &k::Chain<T>,
         start_angles: &[T],
         goal_angles: &[T],
         objects: &Compound<T>,

@@ -31,7 +31,7 @@ where
     N: na::Real,
 {
     /// Instance of `k::HasLinks` to check the collision
-    pub collision_check_robot: k::Robot<N>,
+    pub collision_check_robot: k::Chain<N>,
     /// Collision checker
     pub collision_checker: CollisionChecker<N>,
     /// Unit length for searching
@@ -52,7 +52,7 @@ where
 {
     /// Create `JointPathPlanner`
     pub fn new(
-        collision_check_robot: k::Robot<N>,
+        collision_check_robot: k::Chain<N>,
         collision_checker: CollisionChecker<N>,
         step_length: N,
         max_try: usize,
@@ -67,14 +67,14 @@ where
             urdf_robot: None,
         }
     }
-    /// Check if the joint_angles are OK
+    /// Check if the joint_positions are OK
     pub fn is_feasible(
         &self,
-        using_joints: &k::Robot<N>,
-        joint_angles: &[N],
+        using_joints: &k::Chain<N>,
+        joint_positions: &[N],
         objects: &Compound<N>,
     ) -> bool {
-        if using_joints.set_joint_angles(joint_angles).is_err() {
+        if using_joints.set_joint_positions(joint_positions).is_err() {
             return false;
         }
         !self.has_any_colliding(objects)
@@ -116,22 +116,22 @@ where
     ///   will be checked.
     pub fn plan(
         &self,
-        using_joints: &k::Robot<N>,
+        using_joints: &k::Chain<N>,
         start_angles: &[N],
         goal_angles: &[N],
         objects: &Compound<N>,
     ) -> Result<Vec<Vec<N>>> {
-        let limits = using_joints.joint_limits();
+        let limits = using_joints.limits();
         let step_length = self.step_length;
         let max_try = self.max_try;
-        let current_angles = using_joints.joint_angles();
+        let current_angles = using_joints.joint_positions();
         if !self.is_feasible(using_joints, start_angles, objects) {
-            using_joints.set_joint_angles(&current_angles)?;
+            using_joints.set_joint_positions(&current_angles)?;
             return Err(Error::Collision {
                 part: CollisionPart::Start,
             });
         } else if !self.is_feasible(using_joints, goal_angles, objects) {
-            using_joints.set_joint_angles(&current_angles)?;
+            using_joints.set_joint_positions(&current_angles)?;
             return Err(Error::Collision {
                 part: CollisionPart::End,
             });
@@ -140,13 +140,13 @@ where
             start_angles,
             goal_angles,
             |angles: &[N]| self.is_feasible(using_joints, angles, objects),
-            || generate_random_joint_angles_from_limits(&limits),
+            || generate_random_joint_positions_from_limits(&limits),
             step_length,
             max_try,
         ) {
             Ok(p) => p,
             Err(error) => {
-                using_joints.set_joint_angles(&current_angles)?;
+                using_joints.set_joint_positions(&current_angles)?;
                 return Err(Error::from(error));
             }
         };
@@ -166,7 +166,7 @@ where
 
     /// Get the names of the links
     pub fn joint_names(&self) -> Vec<String> {
-        self.collision_check_robot.joint_names()
+        self.collision_check_robot.names()
     }
 }
 
@@ -175,7 +175,7 @@ pub struct JointPathPlannerBuilder<N>
 where
     N: na::Real,
 {
-    collision_check_robot: k::Robot<N>,
+    collision_check_robot: k::Chain<N>,
     collision_checker: CollisionChecker<N>,
     step_length: N,
     max_try: usize,
@@ -191,7 +191,7 @@ where
     /// Create from components
     ///
     /// There are also some utility functions to create from urdf
-    pub fn new(collision_check_robot: k::Robot<N>, collision_checker: CollisionChecker<N>) -> Self {
+    pub fn new(collision_check_robot: k::Chain<N>, collision_checker: CollisionChecker<N>) -> Self {
         JointPathPlannerBuilder {
             collision_check_robot: collision_check_robot,
             collision_checker: collision_checker,
@@ -287,7 +287,7 @@ mod tests {
         let target = Cuboid::new(Vector3::new(0.5, 1.0, 0.5));
         let target_pose = Isometry3::new(Vector3::new(0.9, 0.0, 0.0), na::zero());
 
-        let robot = k::Robot::<f32>::from(&urdf_robot);
+        let robot = k::Chain::<f32>::from(&urdf_robot);
 
         let names = checker.colliding_link_names(&robot, &target, &target_pose);
         assert_eq!(
@@ -301,7 +301,7 @@ mod tests {
             ]
         );
         let angles = vec![-1.3, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0];
-        robot.set_joint_angles(&angles).unwrap();
+        robot.set_joint_positions(&angles).unwrap();
         let names = checker.colliding_link_names(&robot, &target, &target_pose);
         assert_eq!(
             names,
