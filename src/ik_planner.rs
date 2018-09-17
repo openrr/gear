@@ -52,12 +52,7 @@ where
     ///     .collision_check_margin(0.01)
     ///     .finalize();
     /// // Create inverse kinematics solver
-    /// let solver = gear::JacobianIKSolverBuilder::<f64>::new()
-    ///     .num_max_try(1000)
-    ///     .allowable_target_distance(0.01)
-    ///     .move_epsilon(0.00001)
-    ///     .jacobian_move_epsilon(0.001)
-    ///     .finalize();
+    /// let solver = gear::JacobianIKSolver::default();
     /// // Create path planner with IK solver
     /// let _planner = gear::JointPathPlannerWithIK::new(planner, solver);
     /// ```
@@ -70,8 +65,11 @@ where
     pub fn urdf_robot(&self) -> &Option<urdf_rs::Robot> {
         &self.path_planner.urdf_robot
     }
-    pub fn solve_ik(&mut self, arm: &k::SerialChain<T>, target_pose: &na::Isometry3<T>) -> Result<T>
-    {
+    pub fn solve_ik(
+        &mut self,
+        arm: &k::SerialChain<T>,
+        target_pose: &na::Isometry3<T>,
+    ) -> Result<()> {
         Ok(self.ik_solver.solve(arm, target_pose)?)
     }
     pub fn colliding_link_names(&self, objects: &Compound<T>) -> Vec<String> {

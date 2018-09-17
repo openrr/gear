@@ -26,7 +26,7 @@ use errors::*;
 /// Clamp joint angles to set angles safely
 pub fn generate_clamped_joint_positions_from_limits<T>(
     angles: &[T],
-    limits: &Vec<Option<k::Range<T>>>,
+    limits: &Vec<Option<k::joint::Range<T>>>,
 ) -> Result<Vec<T>>
 where
     T: Real,
@@ -57,7 +57,7 @@ where
 /// Generate random joint angles from the optional limits
 ///
 /// If the limit is None, -PI <-> PI is used.
-pub fn generate_random_joint_positions_from_limits<T>(limits: &Vec<Option<k::Range<T>>>) -> Vec<T>
+pub fn generate_random_joint_positions_from_limits<T>(limits: &Vec<Option<k::joint::Range<T>>>) -> Vec<T>
 where
     T: Real,
 {
@@ -71,7 +71,7 @@ where
 }
 
 /// Find the nearest angle on is for the joints wihout limits
-pub fn modify_to_nearest_angle<T>(vec1: &[T], vec2: &mut [T], limits: &Vec<Option<k::Range<T>>>)
+pub fn modify_to_nearest_angle<T>(vec1: &[T], vec2: &mut [T], limits: &Vec<Option<k::joint::Range<T>>>)
 where
     T: Real,
 {
@@ -134,12 +134,12 @@ where
 
 /// Set random joint angles
 pub fn set_random_joint_positions<T>(
-    robot: &mut k::Chain<T>,
+    robot: &k::Chain<T>,
 ) -> ::std::result::Result<(), k::JointError>
 where
     T: Real,
 {
-    let limits = robot.limits();
+    let limits = robot.iter_joints().map(|j| j.joint().limits.clone()).collect();
     robot.set_joint_positions(&generate_random_joint_positions_from_limits(&limits))
 }
 
@@ -148,10 +148,10 @@ mod tests {
     use super::*;
     #[test]
     fn test_funcs() {
-        let limits: Vec<Option<k::Range<f64>>> = vec![
+        let limits: Vec<Option<k::joint::Range<f64>>> = vec![
             None,
-            Some(k::Range::new(-1.0, 1.0)),
-            Some(k::Range::new(0.0, 0.1)),
+            Some(k::joint::Range::new(-1.0, 1.0)),
+            Some(k::joint::Range::new(0.0, 0.1)),
         ];
         for _ in 0..1000 {
             let angles = generate_random_joint_positions_from_limits(&limits);

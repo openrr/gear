@@ -187,11 +187,9 @@ where
                 .collect::<Vec<_>>();
             debug!("name={}, ln={}", l.name, col_pose_vec.len());
             if !col_pose_vec.is_empty() {
-                let name = match link_joint_map.get(&l.name) {
-                    Some(j) => j.to_owned(),
-                    None => k::urdf::ROOT_JOINT_NAME.to_owned(),
-                };
-                name_collision_model_map.insert(name, col_pose_vec);
+                if let Some(joint_name) = link_joint_map.get(&l.name) {
+                    name_collision_model_map.insert(joint_name.to_owned(), col_pose_vec);
+                }
             }
         }
         CollisionChecker {
@@ -229,10 +227,10 @@ where
     ) -> Vec<String> {
         let mut names = Vec::new();
         robot.update_transforms();
-        for link in robot.iter() {
-            let trans = link.world_transform().unwrap();
-            let link_name = link.name();
-            match self.name_collision_model_map.get(&link_name) {
+        for joint in robot.iter() {
+            let trans = joint.world_transform().unwrap();
+            let joint_name = &joint.joint().name;
+            match self.name_collision_model_map.get(joint_name) {
                 Some(obj_vec) => {
                     for obj in obj_vec {
                         let ctct = query::proximity(
@@ -243,7 +241,7 @@ where
                             self.prediction,
                         );
                         if ctct != Proximity::Disjoint {
-                            names.push(link_name);
+                            names.push(joint_name.to_owned());
                             if first_return {
                                 return names;
                             } else {
@@ -253,7 +251,7 @@ where
                     }
                 }
                 None => {
-                    debug!("collision model {} not found", link_name);
+                    debug!("collision model {} not found", joint_name);
                 }
             }
         }

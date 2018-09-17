@@ -28,11 +28,7 @@ fn main() {
         .collision_check_margin(0.01)
         .finalize();
     // Create inverse kinematics solver
-    let solver = gear::JacobianIKSolverBuilder::new()
-        .num_max_try(1000)
-        .allowable_target_distance(0.01)
-        .move_epsilon(0.0001)
-        .finalize();
+    let solver = gear::JacobianIKSolver::default();
     let solver = gear::RandomInitializeIKSolver::new(solver, 100);
     // Create path planner with IK solver
     let mut planner = gear::JointPathPlannerWithIK::new(planner, solver);

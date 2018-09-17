@@ -121,7 +121,7 @@ where
         goal_angles: &[N],
         objects: &Compound<N>,
     ) -> Result<Vec<Vec<N>>> {
-        let limits = using_joints.limits();
+        let limits = using_joints.iter_joints().map(|j| j.joint().limits.clone()).collect();
         let step_length = self.step_length;
         let max_try = self.max_try;
         let current_angles = using_joints.joint_positions();
@@ -166,7 +166,7 @@ where
 
     /// Get the names of the links
     pub fn joint_names(&self) -> Vec<String> {
-        self.collision_check_robot.names()
+        self.collision_check_robot.iter_joints().map(|j| j.joint().name.clone()).collect()
     }
 }
 
@@ -293,11 +293,11 @@ mod tests {
         assert_eq!(
             names,
             vec![
-                "l_elbow1",
-                "l_wrist1",
-                "l_wrist2",
-                "l_gripper2",
-                "l_gripper1",
+                "l_elbow_pitch",
+                "l_wrist_yaw",
+                "l_wrist_pitch",
+                "l_gripper_linear2",
+                "l_gripper_linear1",
             ]
         );
         let angles = vec![-1.3, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0];
@@ -305,19 +305,19 @@ mod tests {
         let names = checker.colliding_link_names(&robot, &target, &target_pose);
         assert_eq!(
             names,
-            vec!["l_wrist1", "l_wrist2", "l_gripper2", "l_gripper1"]
+            vec!["l_wrist_yaw", "l_wrist_pitch", "l_gripper_linear2", "l_gripper_linear1"]
         );
         let target_pose = Isometry3::new(Vector3::new(0.7, 0.0, 0.0), na::zero());
         let names = checker.colliding_link_names(&robot, &target, &target_pose);
         assert_eq!(
             names,
             vec![
-                "l_shoulder3",
-                "l_elbow1",
-                "l_wrist1",
-                "l_wrist2",
-                "l_gripper2",
-                "l_gripper1",
+                "l_shoulder_roll",
+                "l_elbow_pitch",
+                "l_wrist_yaw",
+                "l_wrist_pitch",
+                "l_gripper_linear2",
+                "l_gripper_linear1",
             ]
         );
     }

@@ -57,11 +57,14 @@ where
             na::Translation3::new(0.40, 0.20, 0.3),
             na::UnitQuaternion::from_euler_angles(0.0, -0.1, 0.0),
         );
-        let arm;
-        {
-        let end_link = planner.path_planner.collision_check_robot.find(end_link_name).expect(&format!("{} not found", end_link_name));
-        arm = k::SerialChain::from_end(end_link);
-        }
+        let arm = {
+            let end_link = planner
+                .path_planner
+                .collision_check_robot
+                .find(end_link_name)
+                .expect(&format!("{} not found", end_link_name));
+            k::SerialChain::from_end(end_link)
+        };
         let end_link_name = end_link_name.to_owned();
         viewer.add_axis_cylinders("ik_target", 0.3);
         CollisionAvoidApp {
@@ -198,7 +201,7 @@ where
                         }
                         Key::R => {
                             self.reset_colliding_link_colors();
-                            gear::set_random_joint_positions(&mut self.arm).unwrap();
+                            gear::set_random_joint_positions(&self.arm).unwrap();
                             self.update_robot();
                         }
                         Key::C => {
@@ -220,7 +223,8 @@ where
                                 None,
                                 is_collide_show,
                             );
-                            self.viewer.update(&self.planner.path_planner.collision_check_robot);
+                            self.viewer
+                                .update(&self.planner.path_planner.collision_check_robot);
                         }
                         _ => {}
                     },
@@ -240,12 +244,7 @@ fn main() {
         .unwrap()
         .collision_check_margin(0.01)
         .finalize();
-    let solver = gear::JacobianIKSolverBuilder::new()
-        .num_max_try(1000)
-        .allowable_target_distance(0.01)
-        .move_epsilon(0.00001)
-        .jacobian_move_epsilon(0.001)
-        .finalize();
+    let solver = gear::JacobianIKSolver::new(0.001, 0.005, 0.2, 100);
     let solver = gear::RandomInitializeIKSolver::new(solver, 100);
     let planner = gear::JointPathPlannerWithIK::new(planner, solver);
     let mut app = CollisionAvoidApp::new(planner, &input_end_link);
