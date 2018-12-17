@@ -139,7 +139,7 @@ pub fn set_random_joint_positions<T>(
 where
     T: Real,
 {
-    let limits = robot.iter_joints().map(|j| j.joint().limits.clone()).collect();
+    let limits = robot.iter_joints().map(|j| j.limits.clone()).collect();
     robot.set_joint_positions(&generate_random_joint_positions_from_limits(&limits))
 }
 

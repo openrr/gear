@@ -121,7 +121,7 @@ where
         goal_angles: &[N],
         objects: &Compound<N>,
     ) -> Result<Vec<Vec<N>>> {
-        let limits = using_joints.iter_joints().map(|j| j.joint().limits.clone()).collect();
+        let limits = using_joints.iter_joints().map(|j| j.limits.clone()).collect();
         let step_length = self.step_length;
         let max_try = self.max_try;
         let current_angles = using_joints.joint_positions();
@@ -166,7 +166,7 @@ where
 
     /// Get the names of the links
     pub fn joint_names(&self) -> Vec<String> {
-        self.collision_check_robot.iter_joints().map(|j| j.joint().name.clone()).collect()
+        self.collision_check_robot.iter_joints().map(|j| j.name.clone()).collect()
     }
 }
 

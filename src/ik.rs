@@ -60,7 +60,7 @@ where
         let mut result = Err(k::IKError::NotConvergedError {
             error: "fail".to_owned(),
         });
-        let limits = arm.iter_joints().map(|j|j.joint().limits.clone()).collect();
+        let limits = arm.iter_joints().map(|j|j.limits.clone()).collect();
         let initial_angles = arm.joint_positions();
 
         for _ in 0..self.num_max_try {

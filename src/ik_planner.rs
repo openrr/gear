@@ -81,7 +81,7 @@ where
         target_pose: &na::Isometry3<T>,
         objects: &Compound<T>,
     ) -> Result<Vec<Vec<T>>> {
-        let end_link: &k::JointNode<T> = self
+        let end_link: &k::Node<T> = self
             .path_planner
             .collision_check_robot
             .find(target_name)
