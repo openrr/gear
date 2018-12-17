@@ -14,7 +14,7 @@ See the License for the specific language governing permissions and
 limitations under the License.
 */
 
-use k::{self, EndTransform, HasJoints, InverseKinematicsSolver};
+use k::{self, InverseKinematicsSolver};
 use na::{self, Real};
 
 use funcs::*;
@@ -52,28 +52,28 @@ where
     T: Real,
     I: InverseKinematicsSolver<T>,
 {
-    fn solve<K>(
+    fn solve(
         &self,
-        arm: &mut K,
+        arm: &k::SerialChain<T>,
         target_pose: &na::Isometry3<T>,
-    ) -> ::std::result::Result<T, k::IKError>
-    where
-        K: HasJoints<T> + EndTransform<T>,
-    {
-        let mut result = Err(k::IKError::NotConverged);
-        let limits = arm.joint_limits();
-        let initial_angles = arm.joint_angles();
+    ) -> ::std::result::Result<(), k::IKError> {
+        let mut result = Err(k::IKError::NotConvergedError {
+            error: "fail".to_owned(),
+        });
+        let limits = arm.iter_joints().map(|j|j.limits.clone()).collect();
+        let initial_angles = arm.joint_positions();
+
         for _ in 0..self.num_max_try {
             result = self.solver.solve(arm, target_pose);
             if result.is_ok() {
                 return result;
             }
-            let mut new_angles = generate_random_joint_angles_from_limits(&limits);
+            let mut new_angles = generate_random_joint_positions_from_limits(&limits);
             modify_to_nearest_angle(&initial_angles, &mut new_angles, &limits);
-            arm.set_joint_angles(&new_angles)?;
+            arm.set_joint_positions(&new_angles)?;
         }
         // failed
-        arm.set_joint_angles(&initial_angles)?;
+        arm.set_joint_positions(&initial_angles)?;
         result
     }
 }

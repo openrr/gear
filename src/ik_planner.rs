@@ -19,10 +19,8 @@ use ncollide3d::shape::Compound;
 use num_traits;
 use urdf_rs;
 
-use k::{EndTransform, HasJoints, HasLinks};
-
 use errors::*;
-use path_planner::DefaultJointPathPlanner;
+use path_planner::JointPathPlanner;
 
 /// Joint path planner which supports inverse kinematics
 pub struct JointPathPlannerWithIK<T, I>
@@ -32,8 +30,8 @@ where
 {
     /// Joint Path Planner to be used to find collision free path
     ///
-    /// Currently, `JointPathPlanner<N, k::LinkTree<N>>` is used.
-    pub path_planner: DefaultJointPathPlanner<T>,
+    /// Currently, `JointPathPlanner<N, k::Chain<N>>` is used.
+    pub path_planner: JointPathPlanner<T>,
     /// Inverse kinematics solver to find the goal joint angles
     pub ik_solver: I,
 }
@@ -54,16 +52,11 @@ where
     ///     .collision_check_margin(0.01)
     ///     .finalize();
     /// // Create inverse kinematics solver
-    /// let solver = gear::JacobianIKSolverBuilder::<f64>::new()
-    ///     .num_max_try(1000)
-    ///     .allowable_target_distance(0.01)
-    ///     .move_epsilon(0.00001)
-    ///     .jacobian_move_epsilon(0.001)
-    ///     .finalize();
+    /// let solver = gear::JacobianIKSolver::default();
     /// // Create path planner with IK solver
     /// let _planner = gear::JointPathPlannerWithIK::new(planner, solver);
     /// ```
-    pub fn new(path_planner: DefaultJointPathPlanner<T>, ik_solver: I) -> Self {
+    pub fn new(path_planner: JointPathPlanner<T>, ik_solver: I) -> Self {
         Self {
             path_planner,
             ik_solver,
@@ -72,66 +65,50 @@ where
     pub fn urdf_robot(&self) -> &Option<urdf_rs::Robot> {
         &self.path_planner.urdf_robot
     }
-    pub fn create_arm(&self, end_link_name: &str) -> Result<k::Manipulator<T>> {
-        let candidates = self.path_planner.collision_check_robot.link_names();
-        k::Manipulator::from_link_tree(end_link_name, &self.path_planner.collision_check_robot)
-            .ok_or(Error::Other {
-                error: format!(
-                    "end link `{}` not found: candidates = {:?}",
-                    end_link_name, candidates
-                ),
-            })
-    }
-    pub fn solve_ik<K>(&mut self, arm: &mut K, target_pose: &na::Isometry3<T>) -> Result<T>
-    where
-        K: HasJoints<T> + EndTransform<T>,
-    {
+    pub fn solve_ik(
+        &mut self,
+        arm: &k::SerialChain<T>,
+        target_pose: &na::Isometry3<T>,
+    ) -> Result<()> {
         Ok(self.ik_solver.solve(arm, target_pose)?)
     }
     pub fn colliding_link_names(&self, objects: &Compound<T>) -> Vec<String> {
         self.path_planner.colliding_link_names(objects)
     }
-    pub fn plan_with_ik<K>(
+    pub fn plan_with_ik(
         &mut self,
-        arm: &mut K,
+        target_name: &str,
         target_pose: &na::Isometry3<T>,
         objects: &Compound<T>,
-    ) -> Result<Vec<Vec<T>>>
-    where
-        K: HasJoints<T> + EndTransform<T>,
-    {
-        let initial = arm.joint_angles();
-        let _ = self.ik_solver.solve(arm, target_pose)?;
-        let goal = arm.joint_angles();
-        self.path_planner.plan(arm, &initial, &goal, objects)
+    ) -> Result<Vec<Vec<T>>> {
+        let end_link: &k::Node<T> = self
+            .path_planner
+            .collision_check_robot
+            .find(target_name)
+            .ok_or(format!("{} not found", target_name))?;
+        let arm = k::SerialChain::from_end(end_link);
+        let initial = arm.joint_positions();
+        let _ = self.ik_solver.solve(&arm, target_pose)?;
+        let goal = arm.joint_positions();
+        self.path_planner.plan(&arm, &initial, &goal, objects)
     }
     pub fn plan_joints<K>(
         &mut self,
-        use_joints: &mut K,
+        use_joints: &k::Chain<T>,
         start_angles: &[T],
         goal_angles: &[T],
         objects: &Compound<T>,
-    ) -> Result<Vec<Vec<T>>>
-    where
-        K: HasJoints<T> + EndTransform<T>,
-    {
+    ) -> Result<Vec<Vec<T>>> {
         self.path_planner
             .plan(use_joints, start_angles, goal_angles, objects)
     }
-}
-
-impl<T, I> HasLinks<T> for JointPathPlannerWithIK<T, I>
-where
-    T: na::Real,
-    I: k::InverseKinematicsSolver<T>,
-{
     /// Calculate the transforms of all of the links
-    fn link_transforms(&self) -> Vec<na::Isometry3<T>> {
-        self.path_planner.link_transforms()
+    pub fn update_transforms(&self) -> Vec<na::Isometry3<T>> {
+        self.path_planner.update_transforms()
     }
 
     /// Get the names of the links
-    fn link_names(&self) -> Vec<String> {
-        self.path_planner.link_names()
+    pub fn joint_names(&self) -> Vec<String> {
+        self.path_planner.joint_names()
     }
 }
