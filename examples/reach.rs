@@ -181,10 +181,13 @@ where
                         }
                         Key::G => {
                             self.reset_colliding_link_colors();
-                            match self.planner.plan_with_ik(
+                            let mut c = k::Constraints::default();
+                            c.rotation_z = false;
+                            match self.planner.plan_with_ik_with_constraints(
                                 &self.end_link_name,
                                 &self.ik_target_pose,
                                 &self.obstacles,
+                                &c,
                             ) {
                                 Ok(mut plan) => {
                                     plan.reverse();
