@@ -121,7 +121,10 @@ where
         goal_angles: &[N],
         objects: &Compound<N>,
     ) -> Result<Vec<Vec<N>>> {
-        let limits = using_joints.iter_joints().map(|j| j.limits.clone()).collect();
+        let limits = using_joints
+            .iter_joints()
+            .map(|j| j.limits.clone())
+            .collect();
         let step_length = self.step_length;
         let max_try = self.max_try;
         let current_angles = using_joints.joint_positions();
@@ -166,7 +169,10 @@ where
 
     /// Get the names of the links
     pub fn joint_names(&self) -> Vec<String> {
-        self.collision_check_robot.iter_joints().map(|j| j.name.clone()).collect()
+        self.collision_check_robot
+            .iter_joints()
+            .map(|j| j.name.clone())
+            .collect()
     }
 }
 
@@ -244,22 +250,29 @@ where
         P: AsRef<Path>,
     {
         let robot = urdf_rs::utils::read_urdf_or_xacro(file.as_ref())?;
-        get_joint_path_planner_builder_from_urdf(robot)
+        let default_margin = na::convert(0.0);
+        let collision_checker = CollisionChecker::from_urdf_robot_with_base_dir(
+            &robot,
+            file.as_ref().parent(),
+            default_margin,
+        );
+        get_joint_path_planner_builder_from_urdf(robot, collision_checker)
     }
     /// Try to create `JointPathPlannerBuilder` instance from `urdf_rs::Robot` instance
     pub fn from_urdf_robot<P>(robot: urdf_rs::Robot) -> Result<JointPathPlannerBuilder<N>> {
-        get_joint_path_planner_builder_from_urdf(robot)
+        let default_margin = na::convert(0.0);
+        let collision_checker = CollisionChecker::from_urdf_robot(&robot, default_margin);
+        get_joint_path_planner_builder_from_urdf(robot, collision_checker)
     }
 }
 
 fn get_joint_path_planner_builder_from_urdf<N>(
     urdf_robot: urdf_rs::Robot,
+    collision_checker: CollisionChecker<N>,
 ) -> Result<JointPathPlannerBuilder<N>>
 where
     N: na::Real,
 {
-    let default_margin = na::convert(0.0);
-    let collision_checker = CollisionChecker::from_urdf_robot(&urdf_robot, default_margin);
     Ok(JointPathPlannerBuilder {
         collision_check_robot: (&urdf_robot).into(),
         collision_checker,
@@ -305,7 +318,12 @@ mod tests {
         let names = checker.colliding_link_names(&robot, &target, &target_pose);
         assert_eq!(
             names,
-            vec!["l_wrist_yaw", "l_wrist_pitch", "l_gripper_linear2", "l_gripper_linear1"]
+            vec![
+                "l_wrist_yaw",
+                "l_wrist_pitch",
+                "l_gripper_linear2",
+                "l_gripper_linear1"
+            ]
         );
         let target_pose = Isometry3::new(Vector3::new(0.7, 0.0, 0.0), na::zero());
         let names = checker.colliding_link_names(&robot, &target, &target_pose);
