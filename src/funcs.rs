@@ -57,7 +57,9 @@ where
 /// Generate random joint angles from the optional limits
 ///
 /// If the limit is None, -PI <-> PI is used.
-pub fn generate_random_joint_positions_from_limits<T>(limits: &Vec<Option<k::joint::Range<T>>>) -> Vec<T>
+pub fn generate_random_joint_positions_from_limits<T>(
+    limits: &Vec<Option<k::joint::Range<T>>>,
+) -> Vec<T>
 where
     T: Real,
 {
@@ -71,8 +73,11 @@ where
 }
 
 /// Find the nearest angle on is for the joints wihout limits
-pub fn modify_to_nearest_angle<T>(vec1: &[T], vec2: &mut [T], limits: &Vec<Option<k::joint::Range<T>>>)
-where
+pub fn modify_to_nearest_angle<T>(
+    vec1: &[T],
+    vec2: &mut [T],
+    limits: &Vec<Option<k::joint::Range<T>>>,
+) where
     T: Real,
 {
     assert_eq!(vec1.len(), vec2.len());

@@ -81,6 +81,20 @@ where
         target_pose: &na::Isometry3<T>,
         objects: &Compound<T>,
     ) -> Result<Vec<Vec<T>>> {
+        self.plan_with_ik_with_constraints(
+            target_name,
+            target_pose,
+            objects,
+            &k::Constraints::default(),
+        )
+    }
+    pub fn plan_with_ik_with_constraints(
+        &mut self,
+        target_name: &str,
+        target_pose: &na::Isometry3<T>,
+        objects: &Compound<T>,
+        constraints: &k::Constraints,
+    ) -> Result<Vec<Vec<T>>> {
         let end_link: &k::Node<T> = self
             .path_planner
             .collision_check_robot
@@ -88,7 +102,9 @@ where
             .ok_or(format!("{} not found", target_name))?;
         let arm = k::SerialChain::from_end(end_link);
         let initial = arm.joint_positions();
-        let _ = self.ik_solver.solve(&arm, target_pose)?;
+        let _ = self
+            .ik_solver
+            .solve_with_constraints(&arm, target_pose, constraints)?;
         let goal = arm.joint_positions();
         self.path_planner.plan(&arm, &initial, &goal, objects)
     }

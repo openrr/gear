@@ -52,19 +52,22 @@ where
     T: Real,
     I: InverseKinematicsSolver<T>,
 {
-    fn solve(
+    fn solve_with_constraints(
         &self,
         arm: &k::SerialChain<T>,
         target_pose: &na::Isometry3<T>,
+        constraints: &k::Constraints,
     ) -> ::std::result::Result<(), k::IKError> {
         let mut result = Err(k::IKError::NotConvergedError {
             error: "fail".to_owned(),
         });
-        let limits = arm.iter_joints().map(|j|j.limits.clone()).collect();
+        let limits = arm.iter_joints().map(|j| j.limits.clone()).collect();
         let initial_angles = arm.joint_positions();
 
         for _ in 0..self.num_max_try {
-            result = self.solver.solve(arm, target_pose);
+            result = self
+                .solver
+                .solve_with_constraints(arm, target_pose, constraints);
             if result.is_ok() {
                 return result;
             }
