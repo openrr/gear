@@ -95,8 +95,14 @@ where
         }
         urdf_rs::Geometry::Cylinder { radius, length } => {
             let y_cylinder = Cylinder::new(na::convert(length * 0.5), na::convert(radius));
-            let tri_mesh =
-                ncollide3d::transformation::convex_hull(&y_cylinder.to_trimesh(30).coords);
+            let tri_mesh = ncollide3d::transformation::convex_hull(
+                &y_cylinder
+                    .to_trimesh(30)
+                    .coords
+                    .iter()
+                    .map(|point| point.xzy())
+                    .collect::<Vec<_>>(),
+            );
             let ind = match tri_mesh.indices {
                 Unified(ind) => ind
                     .into_iter()
@@ -106,13 +112,11 @@ where
                     panic!("convex_hull implemenataion has been changed by ncollide3d update?");
                 }
             };
-            Some(ShapeHandle::new(Compound::new(vec![(
-                na::convert(na::Isometry3::from_parts(
-                    na::Translation3::new(0.0, 0.0, 0.0),
-                    na::UnitQuaternion::from_euler_angles(1.57, 0.0, 0.0),
-                )),
-                ShapeHandle::new(TriMesh::new(tri_mesh.coords, ind, tri_mesh.uvs)),
-            )])))
+            Some(ShapeHandle::new(TriMesh::new(
+                tri_mesh.coords,
+                ind,
+                tri_mesh.uvs,
+            )))
         }
         urdf_rs::Geometry::Sphere { radius } => {
             Some(ShapeHandle::new(Ball::new(na::convert(radius))))

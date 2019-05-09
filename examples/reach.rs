@@ -15,8 +15,8 @@ limitations under the License.
 */
 extern crate env_logger;
 extern crate gear;
-extern crate glfw;
 extern crate k;
+extern crate kiss3d;
 extern crate nalgebra as na;
 extern crate ncollide3d;
 extern crate structopt;
@@ -24,7 +24,7 @@ extern crate urdf_rs;
 extern crate urdf_viz;
 
 use gear::FromUrdf;
-use glfw::{Action, Key, WindowEvent};
+use kiss3d::event::{Action, Key, Modifiers, WindowEvent};
 use ncollide3d::shape::Compound;
 use std::path::{Path, PathBuf};
 use structopt::StructOpt;
@@ -135,9 +135,9 @@ impl CollisionAvoidApp {
 
             for event in self.viewer.events().iter() {
                 match event.value {
-                    WindowEvent::Key(code, _, Action::Press, mods) => match code {
+                    WindowEvent::Key(code, Action::Press, mods) => match code {
                         Key::Up => {
-                            if mods.contains(glfw::Modifiers::Shift) {
+                            if mods.contains(Modifiers::Shift) {
                                 self.ik_target_pose.rotation *=
                                     na::UnitQuaternion::from_euler_angles(0.0, 0.0, 0.2);
                             } else {
@@ -146,7 +146,7 @@ impl CollisionAvoidApp {
                             self.update_ik_target();
                         }
                         Key::Down => {
-                            if mods.contains(glfw::Modifiers::Shift) {
+                            if mods.contains(Modifiers::Shift) {
                                 self.ik_target_pose.rotation *=
                                     na::UnitQuaternion::from_euler_angles(0.0, 0.0, -0.2);
                             } else {
@@ -155,7 +155,7 @@ impl CollisionAvoidApp {
                             self.update_ik_target();
                         }
                         Key::Left => {
-                            if mods.contains(glfw::Modifiers::Shift) {
+                            if mods.contains(Modifiers::Shift) {
                                 self.ik_target_pose.rotation *=
                                     na::UnitQuaternion::from_euler_angles(0.0, 0.2, -0.0);
                             } else {
@@ -164,7 +164,7 @@ impl CollisionAvoidApp {
                             self.update_ik_target();
                         }
                         Key::Right => {
-                            if mods.contains(glfw::Modifiers::Shift) {
+                            if mods.contains(Modifiers::Shift) {
                                 self.ik_target_pose.rotation *=
                                     na::UnitQuaternion::from_euler_angles(0.0, -0.2, 0.0);
                             } else {
@@ -173,7 +173,7 @@ impl CollisionAvoidApp {
                             self.update_ik_target();
                         }
                         Key::B => {
-                            if mods.contains(glfw::Modifiers::Shift) {
+                            if mods.contains(Modifiers::Shift) {
                                 self.ik_target_pose.rotation *=
                                     na::UnitQuaternion::from_euler_angles(-0.2, 0.0, 0.0);
                             } else {
@@ -182,7 +182,7 @@ impl CollisionAvoidApp {
                             self.update_ik_target();
                         }
                         Key::F => {
-                            if mods.contains(glfw::Modifiers::Shift) {
+                            if mods.contains(Modifiers::Shift) {
                                 self.ik_target_pose.rotation *=
                                     na::UnitQuaternion::from_euler_angles(0.2, 0.0, 0.0);
                             } else {
