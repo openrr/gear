@@ -25,10 +25,12 @@ use collision_checker::*;
 use errors::*;
 use funcs::*;
 
+use na::RealField;
+
 /// Collision Avoidance Path Planner
 pub struct JointPathPlanner<N>
 where
-    N: na::Real,
+    N: RealField,
 {
     /// Instance of `k::HasLinks` to check the collision
     pub collision_check_robot: k::Chain<N>,
@@ -48,7 +50,7 @@ where
 
 impl<N> JointPathPlanner<N>
 where
-    N: na::Real + num_traits::Float,
+    N: RealField + num_traits::Float,
 {
     /// Create `JointPathPlanner`
     pub fn new(
@@ -179,7 +181,7 @@ where
 /// Builder pattern to create `JointPathPlanner`
 pub struct JointPathPlannerBuilder<N>
 where
-    N: na::Real,
+    N: RealField,
 {
     collision_check_robot: k::Chain<N>,
     collision_checker: CollisionChecker<N>,
@@ -192,7 +194,7 @@ where
 
 impl<N> JointPathPlannerBuilder<N>
 where
-    N: na::Real + num_traits::Float,
+    N: RealField + num_traits::Float,
 {
     /// Create from components
     ///
@@ -242,7 +244,7 @@ where
 
 impl<N> JointPathPlannerBuilder<N>
 where
-    N: na::Real,
+    N: RealField,
 {
     /// Try to create `JointPathPlannerBuilder` instance from URDF file and end link name
     pub fn from_urdf_file<P>(file: P) -> Result<JointPathPlannerBuilder<N>>
@@ -271,7 +273,7 @@ fn get_joint_path_planner_builder_from_urdf<N>(
     collision_checker: CollisionChecker<N>,
 ) -> Result<JointPathPlannerBuilder<N>>
 where
-    N: na::Real,
+    N: RealField,
 {
     Ok(JointPathPlannerBuilder {
         collision_check_robot: (&urdf_robot).into(),
