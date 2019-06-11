@@ -22,11 +22,13 @@ use urdf_rs;
 use errors::*;
 use path_planner::JointPathPlanner;
 
+use na::RealField;
+
 /// Joint path planner which supports inverse kinematics
 pub struct JointPathPlannerWithIK<T, I>
 where
     I: k::InverseKinematicsSolver<T>,
-    T: na::Real,
+    T: RealField,
 {
     /// Joint Path Planner to be used to find collision free path
     ///
@@ -38,7 +40,7 @@ where
 
 impl<T, I> JointPathPlannerWithIK<T, I>
 where
-    T: na::Real + num_traits::Float,
+    T: RealField + num_traits::Float,
     I: k::InverseKinematicsSolver<T>,
 {
     /// Create instance from `JointPathPlannerBuilder` and `InverseKinematicsSolver`

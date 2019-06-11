@@ -15,7 +15,7 @@ limitations under the License.
 */
 use assimp;
 use k;
-use na::{self, Real, Vector3};
+use na::{self, RealField, Vector3};
 use ncollide3d;
 use ncollide3d::procedural::IndexBuffer::{Split, Unified};
 use ncollide3d::query;
@@ -31,7 +31,7 @@ use errors::*;
 fn load_mesh<P, T>(filename: P, scale: &[f64]) -> Result<TriMesh<T>>
 where
     P: AsRef<Path>,
-    T: Real,
+    T: RealField,
 {
     let mut importer = assimp::Importer::new();
     importer.pre_transform_vertices(|x| x.enable = true);
@@ -48,7 +48,7 @@ where
 
 fn assimp_scene_to_ncollide_mesh<T>(scene: assimp::Scene, scale: &[f64]) -> TriMesh<T>
 where
-    T: Real,
+    T: RealField,
 {
     let mut vertices = Vec::new();
     let mut indices = Vec::new();
@@ -82,7 +82,7 @@ fn urdf_geometry_to_shape_handle<T>(
     base_dir: Option<&Path>,
 ) -> Option<ShapeHandle<T>>
 where
-    T: Real,
+    T: RealField,
 {
     match *collision_geometry {
         urdf_rs::Geometry::Box { ref size } => {
@@ -145,7 +145,7 @@ where
 /// Collision checker for a robot
 pub struct CollisionChecker<T>
 where
-    T: Real,
+    T: RealField,
 {
     name_collision_model_map: HashMap<String, Vec<(ShapeHandle<T>, na::Isometry3<T>)>>,
     /// margin length for collision check
@@ -154,7 +154,7 @@ where
 
 impl<T> CollisionChecker<T>
 where
-    T: Real,
+    T: RealField,
 {
     /// Create CollisionChecker from HashMap
     pub fn new(

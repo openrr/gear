@@ -15,7 +15,7 @@ limitations under the License.
 */
 
 use k::{self, InverseKinematicsSolver};
-use na::{self, Real};
+use na::{self, RealField};
 
 use funcs::*;
 
@@ -24,7 +24,7 @@ use funcs::*;
 pub struct RandomInitializeIKSolver<T, I>
 where
     I: InverseKinematicsSolver<T>,
-    T: Real,
+    T: RealField,
 {
     /// The IK solver to be used after set random joint angles
     pub solver: I,
@@ -35,7 +35,7 @@ where
 
 impl<T, I> RandomInitializeIKSolver<T, I>
 where
-    T: Real,
+    T: RealField,
     I: InverseKinematicsSolver<T>,
 {
     pub fn new(solver: I, num_max_try: usize) -> Self {
@@ -49,7 +49,7 @@ where
 
 impl<T, I> InverseKinematicsSolver<T> for RandomInitializeIKSolver<T, I>
 where
-    T: Real,
+    T: RealField,
     I: InverseKinematicsSolver<T>,
 {
     fn solve_with_constraints(

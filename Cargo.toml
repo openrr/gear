@@ -1,6 +1,6 @@
 [package]
 name = "gear"
-version = "0.4.0"
+version = "0.5.0"
 authors = ["Takashi Ogura <t.ogura@gmail.com>"]
 description = "Collision avoidance path planning for robotics"
 license = "Apache-2.0"
@@ -12,10 +12,10 @@ readme = "README.md"
 
 [dependencies]
 failure = "0.1"
-k = "0.14"
+k = "0.15"
 log = "0.3.8"
-nalgebra = "0.17.0"
-ncollide3d = "0.18.0"
+nalgebra = "0.18.0"
+ncollide3d = "0.19.0"
 rand = "0.3.0"
 rrt = "0.4.0"
 urdf-rs = "0.4.0"
@@ -26,5 +26,5 @@ assimp = "0.3.0"
 [dev-dependencies]
 env_logger = "0.4.2"
 structopt = "0.2.0"
-kiss3d = "0.18"
-urdf-viz = "0.15.0"
+kiss3d = "0.20"
+urdf-viz = "0.16"

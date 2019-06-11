@@ -15,7 +15,7 @@ limitations under the License.
 */
 
 use k;
-use na::{self, Real};
+use na::{self, RealField};
 use num_traits::Float;
 use rand;
 use std::f64::consts::PI;
@@ -29,7 +29,7 @@ pub fn generate_clamped_joint_positions_from_limits<T>(
     limits: &Vec<Option<k::joint::Range<T>>>,
 ) -> Result<Vec<T>>
 where
-    T: Real,
+    T: RealField,
 {
     if angles.len() != limits.len() {
         return Err(Error::from("size mismatch of input angles and limits"));
@@ -61,7 +61,7 @@ pub fn generate_random_joint_positions_from_limits<T>(
     limits: &Vec<Option<k::joint::Range<T>>>,
 ) -> Vec<T>
 where
-    T: Real,
+    T: RealField,
 {
     limits
         .iter()
@@ -78,7 +78,7 @@ pub fn modify_to_nearest_angle<T>(
     vec2: &mut [T],
     limits: &Vec<Option<k::joint::Range<T>>>,
 ) where
-    T: Real,
+    T: RealField,
 {
     assert_eq!(vec1.len(), vec2.len());
     for i in 0..vec1.len() {
@@ -142,7 +142,7 @@ pub fn set_random_joint_positions<T>(
     robot: &k::Chain<T>,
 ) -> ::std::result::Result<(), k::JointError>
 where
-    T: Real,
+    T: RealField,
 {
     let limits = robot.iter_joints().map(|j| j.limits.clone()).collect();
     robot.set_joint_positions(&generate_random_joint_positions_from_limits(&limits))
