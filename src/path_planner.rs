@@ -227,6 +227,9 @@ where
         self
     }
     pub fn finalize(mut self) -> JointPathPlanner<N> {
+        if let Some(margin) = self.collision_check_margin {
+            self.collision_checker.prediction = margin;
+        }
         let mut planner = JointPathPlanner::new(
             self.collision_check_robot,
             self.collision_checker,
@@ -234,9 +237,6 @@ where
             self.max_try,
             self.num_smoothing,
         );
-        if let Some(margin) = self.collision_check_margin {
-            self.collision_checker.prediction = margin;
-        }
         planner.urdf_robot = self.urdf_robot;
         planner
     }
