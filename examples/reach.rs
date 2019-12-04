@@ -127,6 +127,7 @@ impl CollisionAvoidApp {
         self.update_robot();
         self.update_ik_target();
         let mut plans: Vec<Vec<f64>> = Vec::new();
+
         while self.viewer.render() {
             if !plans.is_empty() {
                 self.arm.set_joint_positions(&plans.pop().unwrap()).unwrap();
@@ -250,6 +251,17 @@ impl CollisionAvoidApp {
                             );
                             self.viewer
                                 .update(&self.planner.path_planner.collision_check_robot);
+                        },
+                        Key::P => {
+                            for v in gear::get_reachable_region(&self.planner.ik_solver,
+                                &self.arm, &self.ik_target_pose, &k::Constraints::default(),
+                                na::Vector3::new(0.8, 0.8, 0.8),
+                                na::Vector3::new(-0.8, -0.8, -0.8),
+                                0.2) {
+                            let mut c = self.viewer.window.add_cube(0.1, 0.1, 0.1);
+                            c.prepend_to_local_transformation(&na::convert(v));
+                            c.set_color(1.0, 0.0, 0.0);
+                                }
                         }
                         _ => {}
                     },

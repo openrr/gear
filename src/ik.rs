@@ -80,3 +80,85 @@ where
         result
     }
 }
+
+pub fn get_reachable_region<T, I>(
+    ik_solver: &I,
+    arm: &k::SerialChain<T>,
+    initial_pose: &na::Isometry3<T>,
+    constraints: &k::Constraints,
+    max_point: na::Vector3<T>,
+    min_point: na::Vector3<T>,
+    unit_check_length: T,
+) -> Vec<na::Isometry3<T>>
+where
+    T: RealField,
+    I: InverseKinematicsSolver<T>,
+{
+    let initial_angles = arm.joint_positions();
+    let mut z = min_point[2];
+    let mut solved_poses = Vec::new();
+    let mut target_pose = initial_pose.clone();
+    while z < max_point[2] {
+        target_pose.translation.vector[2] = z;
+        let mut y = min_point[1];
+        while y < max_point[1] {
+            target_pose.translation.vector[1] = y;
+            let mut x = min_point[0];
+            while x < max_point[0] {
+                //
+                target_pose.translation.vector[0] = x;
+                arm.set_joint_positions_unchecked(&initial_angles);
+                if ik_solver
+                    .solve_with_constraints(arm, &target_pose, constraints)
+                    .is_ok()
+                {
+                    solved_poses.push(target_pose.clone());
+                }
+                println!("{} {} {}", x, y, z);
+                x += unit_check_length;
+            }
+            y += unit_check_length;
+
+        }
+        z += unit_check_length;
+    }
+    solved_poses
+}
+
+#[cfg(test)]
+mod tests {
+    use super::*;
+
+    #[test]
+    fn get_region() {
+        let chain = k::Chain::<f32>::from_urdf_file("sample.urdf").unwrap();
+
+        // Set initial joint angles
+        let angles = vec![0.2, 0.2, 0.0, -1.0, 0.0, 0.0, 0.0, 0.0];
+
+        chain.set_joint_positions(&angles).unwrap();
+        println!("initial angles={:?}", chain.joint_positions());
+
+        let target_link = chain.find("l_wrist_pitch").unwrap();
+
+        // Get the transform of the end of the manipulator (forward kinematics)
+        chain.update_transforms();
+        let target = target_link.world_transform().unwrap();
+        println!("{:?}", target.translation);
+        // Create IK solver with default settings
+        let solver = k::JacobianIKSolver::default();
+
+        // Create a set of joints from end joint
+        let arm = k::SerialChain::from_end(target_link);
+        let regions = get_reachable_region(
+            &solver,
+            &arm,
+            &target,
+            &k::Constraints::default(),
+            na::Vector3::new(0.8, 0.9, 0.9),
+            na::Vector3::new(0.0, -0.9, 0.0),
+            0.1,
+        );
+        assert_eq!(regions.len(), 159);
+    }
+}
