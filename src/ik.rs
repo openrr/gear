@@ -114,11 +114,9 @@ where
                 {
                     solved_poses.push(target_pose.clone());
                 }
-                println!("{} {} {}", x, y, z);
                 x += unit_check_length;
             }
             y += unit_check_length;
-
         }
         z += unit_check_length;
     }
