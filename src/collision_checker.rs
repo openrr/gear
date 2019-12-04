@@ -205,7 +205,7 @@ where
     pub fn has_any_colliding(
         &self,
         robot: &k::Chain<T>,
-        target_shape: &Shape<T>,
+        target_shape: &dyn Shape<T>,
         target_pose: &na::Isometry3<T>,
     ) -> bool {
         !self
@@ -216,7 +216,7 @@ where
     pub fn colliding_link_names(
         &self,
         robot: &k::Chain<T>,
-        target_shape: &Shape<T>,
+        target_shape: &dyn Shape<T>,
         target_pose: &na::Isometry3<T>,
     ) -> Vec<String> {
         self.colliding_link_names_with_first_return_flag(robot, target_shape, target_pose, false)
@@ -225,7 +225,7 @@ where
     fn colliding_link_names_with_first_return_flag(
         &self,
         robot: &k::Chain<T>,
-        target_shape: &Shape<T>,
+        target_shape: &dyn Shape<T>,
         target_pose: &na::Isometry3<T>,
         first_return: bool,
     ) -> Vec<String> {
