@@ -74,6 +74,14 @@ where
     ) -> Result<()> {
         Ok(self.ik_solver.solve(arm, target_pose)?)
     }
+    pub fn solve_ik_with_constraints(
+        &mut self,
+        arm: &k::SerialChain<T>,
+        target_pose: &na::Isometry3<T>,
+        c: &k::Constraints,
+    ) -> Result<()> {
+        Ok(self.ik_solver.solve_with_constraints(arm, target_pose, c)?)
+    }
     pub fn colliding_link_names(&self, objects: &Compound<T>) -> Vec<String> {
         self.path_planner.colliding_link_names(objects)
     }

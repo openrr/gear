@@ -127,6 +127,7 @@ impl CollisionAvoidApp {
         self.update_robot();
         self.update_ik_target();
         let mut plans: Vec<Vec<f64>> = Vec::new();
+
         while self.viewer.render() {
             if !plans.is_empty() {
                 self.arm.set_joint_positions(&plans.pop().unwrap()).unwrap();
@@ -192,7 +193,15 @@ impl CollisionAvoidApp {
                         }
                         Key::I => {
                             self.reset_colliding_link_colors();
-                            let result = self.planner.solve_ik(&self.arm, &self.ik_target_pose);
+                            let mut c = k::Constraints::default();
+                            c.rotation_x = !self.ignore_rotation_x;
+                            c.rotation_y = !self.ignore_rotation_y;
+                            c.rotation_z = !self.ignore_rotation_z;
+                            let result = self.planner.solve_ik_with_constraints(
+                                &self.arm,
+                                &self.ik_target_pose,
+                                &c,
+                            );
                             if result.is_ok() {
                                 self.update_robot();
                             } else {
@@ -250,6 +259,28 @@ impl CollisionAvoidApp {
                             );
                             self.viewer
                                 .update(&self.planner.path_planner.collision_check_robot);
+                        }
+                        Key::X => {
+                            println!("start reachable region calculation");
+
+                            let mut c = k::Constraints::default();
+                            c.rotation_x = !self.ignore_rotation_x;
+                            c.rotation_y = !self.ignore_rotation_y;
+                            c.rotation_z = !self.ignore_rotation_z;
+                            for v in gear::get_reachable_region(
+                                &self.planner.ik_solver,
+                                &self.arm,
+                                &self.ik_target_pose,
+                                &c,
+                                na::Vector3::new(1.0, 1.5, 1.5),
+                                na::Vector3::new(-0.8, -0.8, -0.5),
+                                0.1,
+                            ) {
+                                let mut c = self.viewer.window.add_cube(0.05, 0.04, 0.03);
+                                c.prepend_to_local_transformation(&na::convert(v));
+                                c.set_color(0.0, 1.0, 0.0);
+                            }
+                            println!("finished reachable region calculation");
                         }
                         _ => {}
                     },
