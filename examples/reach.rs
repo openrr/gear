@@ -43,6 +43,7 @@ struct CollisionAvoidApp {
     ignore_rotation_x: bool,
     ignore_rotation_y: bool,
     ignore_rotation_z: bool,
+    self_collision_pairs: Vec<(String, String)>,
 }
 
 impl CollisionAvoidApp {
@@ -53,6 +54,7 @@ impl CollisionAvoidApp {
         ignore_rotation_x: bool,
         ignore_rotation_y: bool,
         ignore_rotation_z: bool,
+        self_collision_pairs: Vec<(String, String)>,
     ) -> Self {
         let planner = gear::JointPathPlannerBuilder::from_urdf_file(&robot_path)
             .unwrap()
@@ -92,6 +94,7 @@ impl CollisionAvoidApp {
             ignore_rotation_x,
             ignore_rotation_y,
             ignore_rotation_z,
+            self_collision_pairs,
         }
     }
     fn update_robot(&mut self) {
@@ -135,10 +138,14 @@ impl CollisionAvoidApp {
                 self.arm.set_joint_positions(&plans.pop().unwrap()).unwrap();
                 self.update_robot();
             }
-
+            std::thread::sleep(std::time::Duration::from_millis(10));
             for event in self.viewer.events().iter() {
                 match event.value {
                     WindowEvent::Key(code, Action::Press, mods) => match code {
+                        Key::U => {
+                            self.ik_target_pose = self.arm.end_transform();
+                            self.update_ik_target();
+                        }
                         Key::Up => {
                             if mods.contains(Modifiers::Shift) {
                                 self.ik_target_pose.rotation *=
@@ -203,7 +210,7 @@ impl CollisionAvoidApp {
                             if result.is_err() {
                                 println!("fail!! {:?}", result);
                             }
-                                self.update_robot();
+                            self.update_robot();
                         }
                         Key::G => {
                             self.reset_colliding_link_colors();
@@ -222,6 +229,7 @@ impl CollisionAvoidApp {
                                         .collect();
                                 }
                                 Err(error) => {
+                                    self.update_robot();
                                     println!("failed to reach!! {}", error);
                                 }
                             };
@@ -238,6 +246,31 @@ impl CollisionAvoidApp {
                             for name in &self.colliding_link_names {
                                 println!("{}", name);
                                 self.viewer.set_temporal_color(name, 0.8, 0.8, 0.6);
+                            }
+                            println!("===========");
+                        }
+                        Key::S => {
+                            self.reset_colliding_link_colors();
+                            let pairs = self
+                                .planner
+                                .path_planner
+                                .collision_checker
+                                .self_colliding_link_names(
+                                    &self.planner.path_planner.collision_check_robot,
+                                    &self.self_collision_pairs,
+                                )
+                                .unwrap_or_else(|e| {
+                                    println!("{:?}", e);
+                                    vec![]
+                                });
+                            self.colliding_link_names.clear();
+                            for p in pairs {
+                                self.colliding_link_names.push(p.0);
+                                self.colliding_link_names.push(p.1);
+                            }
+                            for name in &self.colliding_link_names {
+                                println!("{}", name);
+                                self.viewer.set_temporal_color(name, 0.8, 0.4, 0.6);
                             }
                             println!("===========");
                         }
@@ -287,11 +320,18 @@ struct Opt {
     obstacle_urdf_path: PathBuf,
     #[structopt(short = "e", long = "end-link", default_value = "l_tool_fixed")]
     end_link: String,
+    #[structopt(short = "s", long = "self-collision-pair")]
+    self_collision_pair: Vec<String>,
 }
 
 fn main() {
     env_logger::init().unwrap();
     let opt = Opt::from_args();
+    let mut self_collision_pairs: Vec<(String, String)> = Vec::new();
+    for pair in opt.self_collision_pair {
+        let mut sp = pair.split(":");
+        self_collision_pairs.push((sp.next().unwrap().to_owned(), sp.next().unwrap().to_owned()));
+    }
     let mut app = CollisionAvoidApp::new(
         &opt.robot_urdf_path,
         &opt.end_link,
@@ -299,6 +339,7 @@ fn main() {
         opt.ignore_rotation_x,
         opt.ignore_rotation_y,
         opt.ignore_rotation_z,
+        self_collision_pairs,
     );
     app.run();
 }
