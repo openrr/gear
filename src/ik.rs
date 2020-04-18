@@ -157,6 +157,6 @@ mod tests {
             na::Vector3::new(0.0, -0.9, 0.0),
             0.1,
         );
-        assert_eq!(regions.len(), 159);
+        assert_eq!(regions.len(), 161);
     }
 }
