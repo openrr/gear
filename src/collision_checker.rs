@@ -225,7 +225,7 @@ where
         self.colliding_link_names_with_first_return_flag(robot, target_shape, target_pose, false)
     }
 
-    fn colliding_link_names_with_first_return_flag(
+    pub fn colliding_link_names_with_first_return_flag(
         &self,
         robot: &k::Chain<T>,
         target_shape: &dyn Shape<T>,
@@ -265,40 +265,48 @@ where
     /// Check if there are any self colliding links
     pub fn has_self_collision(
         &self,
-        robot: &k::Chain<T>,
+        collision_check_robot: &k::Chain<T>,
         self_collision_pairs: &[(String, String)],
     ) -> Result<bool> {
         Ok(!self
-            .self_colliding_link_names_with_first_return_flag(robot, self_collision_pairs, true)?
+            .self_colliding_link_names_with_first_return_flag(
+                collision_check_robot,
+                self_collision_pairs,
+                true,
+            )?
             .is_empty())
     }
     /// Returns the names which is colliding with the target shape/pose
     pub fn self_colliding_link_names(
         &self,
-        robot: &k::Chain<T>,
+        collision_check_robot: &k::Chain<T>,
         self_collision_pairs: &[(String, String)],
     ) -> Result<Vec<(String, String)>> {
-        self.self_colliding_link_names_with_first_return_flag(robot, self_collision_pairs, false)
+        self.self_colliding_link_names_with_first_return_flag(
+            collision_check_robot,
+            self_collision_pairs,
+            false,
+        )
     }
     // self
-    fn self_colliding_link_names_with_first_return_flag(
+    pub fn self_colliding_link_names_with_first_return_flag(
         &self,
-        robot: &k::Chain<T>,
+        collision_check_robot: &k::Chain<T>,
         self_collision_pairs: &[(String, String)],
         first_return: bool,
     ) -> Result<Vec<(String, String)>> {
         let mut names = Vec::new();
-        robot.update_transforms();
+        collision_check_robot.update_transforms();
         for (j1, j2) in self_collision_pairs {
             if let Some(obj_vec1) = self.name_collision_model_map.get(j1) {
                 if let Some(obj_vec2) = self.name_collision_model_map.get(j2) {
-                    let node1_opt = robot.find(j1);
-                    let node2_opt = robot.find(j2);
+                    let node1_opt = collision_check_robot.find(j1);
+                    let node2_opt = collision_check_robot.find(j2);
                     if node1_opt.is_none() {
-                        return Err(format!("{} not found", j1).into());
+                        return Err(format!("self_colliding: {} not found", j1).into());
                     }
                     if node2_opt.is_none() {
-                        return Err(format!("{} not found", j2).into());
+                        return Err(format!("self_colliding: {} not found", j2).into());
                     }
                     let node1 = node1_opt.unwrap();
                     let node2 = node2_opt.unwrap();
@@ -313,8 +321,8 @@ where
                                 &(trans2 * obj2.1),
                                 &*obj2.0,
                             );
+                            debug!("name: {}, name: {} dist={}", j1, j2, dist);
                             if dist < self.prediction {
-                                debug!("name: {}, name: {} dist={}", j1, j2, dist);
                                 names.push((j1.to_owned(), j2.to_owned()));
                                 if first_return {
                                     return Ok(names);
@@ -339,6 +347,38 @@ pub trait FromUrdf {
         P: AsRef<Path>,
     {
         Ok(Self::from_urdf_robot(&urdf_rs::read_file(path)?))
+    }
+}
+
+pub fn parse_colon_separated_pairs(pair_strs: &[String]) -> Result<Vec<(String, String)>> {
+    let mut pairs = Vec::new();
+    for pair_str in pair_strs {
+        let mut sp = pair_str.split(":");
+        if let Some(p1) = sp.next() {
+            if let Some(p2) = sp.next() {
+                pairs.push((p1.to_owned(), p2.to_owned()));
+            } else {
+                return Err(format!("failed to parse {}", pair_str).into());
+            }
+        } else {
+            return Err(format!("failed to parse {}", pair_str).into());
+        }
+    }
+    Ok(pairs)
+}
+
+#[cfg(test)]
+mod test {
+    use super::parse_colon_separated_pairs;
+    #[test]
+    fn test_parse_colon_separated_pairs() {
+        let pairs =
+            parse_colon_separated_pairs(&vec!["j0:j1".to_owned(), "j2:j0".to_owned()]).unwrap();
+        assert_eq!(pairs.len(), 2);
+        assert_eq!(pairs[0].0, "j0");
+        assert_eq!(pairs[0].1, "j1");
+        assert_eq!(pairs[1].0, "j2");
+        assert_eq!(pairs[1].1, "j0");
     }
 }
 

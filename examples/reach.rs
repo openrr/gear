@@ -303,9 +303,9 @@ impl CollisionAvoidApp {
                                 &self.arm,
                                 &self.ik_target_pose,
                                 &c,
-                                na::Vector3::new(1.0, 1.5, 1.5),
-                                na::Vector3::new(-0.8, -0.8, -0.5),
-                                0.1,
+                                na::Vector3::new(1.5, 1.5, 1.5),
+                                na::Vector3::new(-1.5, -1.5, -0.5),
+                                0.2,
                             ) {
                                 let mut c = self.viewer.window.add_cube(0.05, 0.04, 0.03);
                                 c.prepend_to_local_transformation(&na::convert(v));
@@ -354,11 +354,6 @@ struct Opt {
 fn main() {
     env_logger::init().unwrap();
     let opt = Opt::from_args();
-    let mut self_collision_pairs: Vec<(String, String)> = Vec::new();
-    for pair in opt.self_collision_pair {
-        let mut sp = pair.split(":");
-        self_collision_pairs.push((sp.next().unwrap().to_owned(), sp.next().unwrap().to_owned()));
-    }
     let mut app = CollisionAvoidApp::new(
         &opt.robot_urdf_path,
         &opt.end_link,
@@ -366,7 +361,7 @@ fn main() {
         opt.ignore_rotation_x,
         opt.ignore_rotation_y,
         opt.ignore_rotation_z,
-        self_collision_pairs,
+        gear::parse_colon_separated_pairs(&opt.self_collision_pair),
     );
     app.run();
 }
