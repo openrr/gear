@@ -12,7 +12,7 @@ readme = "README.md"
 
 [dependencies]
 failure = "0.1"
-k = "0.15"
+k = "0.16"
 log = "0.3.8"
 nalgebra = "0.18.0"
 ncollide3d = "0.19.0"
@@ -27,4 +27,4 @@ assimp = "0.3.0"
 env_logger = "0.4.2"
 structopt = "0.2.0"
 kiss3d = "0.20"
-urdf-viz = "0.16"
+urdf-viz = { version = "0.16", path = "../urdf-viz" }

@@ -19,7 +19,6 @@ use na::{self, RealField, Vector3};
 use ncollide3d;
 use ncollide3d::procedural::IndexBuffer::{Split, Unified};
 use ncollide3d::query;
-use ncollide3d::query::Proximity;
 use ncollide3d::shape::{Ball, Compound, Cuboid, Cylinder, Shape, ShapeHandle, TriMesh};
 use ncollide3d::transformation::ToTriMesh;
 use std::collections::HashMap;
@@ -150,6 +149,7 @@ where
     name_collision_model_map: HashMap<String, Vec<(ShapeHandle<T>, na::Isometry3<T>)>>,
     /// margin length for collision check
     pub prediction: T,
+    pub self_collision_pairs: Vec<(String, String)>,
 }
 
 impl<T> CollisionChecker<T>
@@ -164,8 +164,10 @@ where
         CollisionChecker {
             name_collision_model_map,
             prediction,
+            self_collision_pairs: Vec::new(),
         }
     }
+
     /// Create CollisionChecker from urdf_rs::Robot
     pub fn from_urdf_robot(urdf_robot: &urdf_rs::Robot, prediction: T) -> Self {
         Self::from_urdf_robot_with_base_dir(urdf_robot, None, prediction)
@@ -199,6 +201,7 @@ where
         CollisionChecker {
             name_collision_model_map,
             prediction,
+            self_collision_pairs: Vec::new(),
         }
     }
     /// Check if there are any colliding links
@@ -237,14 +240,11 @@ where
             match self.name_collision_model_map.get(joint_name) {
                 Some(obj_vec) => {
                     for obj in obj_vec {
-                        let ctct = query::proximity(
-                            &(trans * obj.1),
-                            &*obj.0,
-                            target_pose,
-                            target_shape,
-                            self.prediction,
-                        );
-                        if ctct != Proximity::Disjoint {
+                        // proximity and prediction does not work for meshes.
+                        let dist =
+                            query::distance(&(trans * obj.1), &*obj.0, target_pose, target_shape);
+                        if dist < self.prediction {
+                            debug!("name: {}, dist={}", joint_name, dist);
                             names.push(joint_name.to_owned());
                             if first_return {
                                 return names;
@@ -260,6 +260,74 @@ where
             }
         }
         names
+    }
+
+    /// Check if there are any self colliding links
+    pub fn has_self_collision(
+        &self,
+        robot: &k::Chain<T>,
+        self_collision_pairs: &[(String, String)],
+    ) -> Result<bool> {
+        Ok(!self
+            .self_colliding_link_names_with_first_return_flag(robot, self_collision_pairs, true)?
+            .is_empty())
+    }
+    /// Returns the names which is colliding with the target shape/pose
+    pub fn self_colliding_link_names(
+        &self,
+        robot: &k::Chain<T>,
+        self_collision_pairs: &[(String, String)],
+    ) -> Result<Vec<(String, String)>> {
+        self.self_colliding_link_names_with_first_return_flag(robot, self_collision_pairs, false)
+    }
+    // self
+    fn self_colliding_link_names_with_first_return_flag(
+        &self,
+        robot: &k::Chain<T>,
+        self_collision_pairs: &[(String, String)],
+        first_return: bool,
+    ) -> Result<Vec<(String, String)>> {
+        let mut names = Vec::new();
+        robot.update_transforms();
+        for (j1, j2) in self_collision_pairs {
+            if let Some(obj_vec1) = self.name_collision_model_map.get(j1) {
+                if let Some(obj_vec2) = self.name_collision_model_map.get(j2) {
+                    let node1_opt = robot.find(j1);
+                    let node2_opt = robot.find(j2);
+                    if node1_opt.is_none() {
+                        return Err(format!("{} not found", j1).into());
+                    }
+                    if node2_opt.is_none() {
+                        return Err(format!("{} not found", j2).into());
+                    }
+                    let node1 = node1_opt.unwrap();
+                    let node2 = node2_opt.unwrap();
+                    for obj1 in obj_vec1 {
+                        for obj2 in obj_vec2 {
+                            let trans1 = node1.world_transform().unwrap();
+                            let trans2 = node2.world_transform().unwrap();
+                            // proximity and predict does not work correctly for mesh
+                            let dist = query::distance(
+                                &(trans1 * obj1.1),
+                                &*obj1.0,
+                                &(trans2 * obj2.1),
+                                &*obj2.0,
+                            );
+                            if dist < self.prediction {
+                                debug!("name: {}, name: {} dist={}", j1, j2, dist);
+                                names.push((j1.to_owned(), j2.to_owned()));
+                                if first_return {
+                                    return Ok(names);
+                                } else {
+                                    break;
+                                }
+                            }
+                        }
+                    }
+                }
+            }
+        }
+        Ok(names)
     }
 }
 
