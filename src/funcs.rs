@@ -54,6 +54,19 @@ where
         .collect())
 }
 
+/// Set joint positions safely
+///
+/// The input vec is clamped to the limits.
+pub fn set_clamped_joint_positions<T>(chain: &k::Chain<T>, vec: &[T]) -> Result<()>
+where
+    T: RealField,
+{
+    let limits = chain.iter_joints().map(|j| j.limits).collect();
+    let clamped = generate_clamped_joint_positions_from_limits(vec, &limits)?;
+    chain.set_joint_positions(&clamped)?;
+    Ok(())
+}
+
 /// Generate random joint angles from the optional limits
 ///
 /// If the limit is None, -PI <-> PI is used.
