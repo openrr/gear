@@ -121,6 +121,12 @@ impl CollisionAvoidApp {
     }
     fn run(&mut self) {
         let mut is_collide_show = false;
+
+        let mut c = k::Constraints::default();
+        c.rotation_x = !self.ignore_rotation_x;
+        c.rotation_y = !self.ignore_rotation_y;
+        c.rotation_z = !self.ignore_rotation_z;
+
         self.update_robot();
         self.update_ik_target();
         let mut plans: Vec<Vec<f64>> = Vec::new();
@@ -199,18 +205,13 @@ impl CollisionAvoidApp {
                                 &self.ik_target_pose,
                                 &c,
                             );
-                            if result.is_ok() {
-                                self.update_robot();
-                            } else {
-                                println!("fail!!");
+                            if result.is_err() {
+                                println!("fail!! {:?}", result);
                             }
+                            self.update_robot();
                         }
                         Key::G => {
                             self.reset_colliding_link_colors();
-                            let mut c = k::Constraints::default();
-                            c.rotation_x = !self.ignore_rotation_x;
-                            c.rotation_y = !self.ignore_rotation_y;
-                            c.rotation_z = !self.ignore_rotation_z;
                             match self.planner.plan_with_ik_with_constraints(
                                 &self.end_link_name,
                                 &self.ik_target_pose,
