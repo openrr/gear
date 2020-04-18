@@ -69,11 +69,7 @@ impl CollisionAvoidApp {
             urdf_rs::utils::read_urdf_or_xacro(obstacle_path).expect("obstacle file not found");
         let obstacles = Compound::from_urdf_robot(&urdf_obstacles);
         viewer.add_robot(&urdf_obstacles);
-
-        let ik_target_pose = na::Isometry3::from_parts(
-            na::Translation3::new(0.40, 0.20, 0.3),
-            na::UnitQuaternion::from_euler_angles(0.0, -0.1, 0.0),
-        );
+        println!("robot={}", planner.path_planner.collision_check_robot);
         let arm = {
             let end_link = planner
                 .path_planner
@@ -82,6 +78,7 @@ impl CollisionAvoidApp {
                 .expect(&format!("{} not found", end_link_name));
             k::SerialChain::from_end(end_link)
         };
+        let ik_target_pose = arm.end_transform();
         let end_link_name = end_link_name.to_owned();
         viewer.add_axis_cylinders("ik_target", 0.3);
         CollisionAvoidApp {
