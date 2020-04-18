@@ -240,11 +240,11 @@ where
             match self.name_collision_model_map.get(joint_name) {
                 Some(obj_vec) => {
                     for obj in obj_vec {
-                        // proximity and prediction does not works for meshes.
+                        // proximity and prediction does not work for meshes.
                         let dist =
                             query::distance(&(trans * obj.1), &*obj.0, target_pose, target_shape);
                         if dist < self.prediction {
-                            println!("name: {}, dist={}", joint_name, dist);
+                            debug!("name: {}, dist={}", joint_name, dist);
                             names.push(joint_name.to_owned());
                             if first_return {
                                 return names;
@@ -304,9 +304,9 @@ where
                     let node2 = node2_opt.unwrap();
                     for obj1 in obj_vec1 {
                         for obj2 in obj_vec2 {
-                            // proximity and predict
                             let trans1 = node1.world_transform().unwrap();
                             let trans2 = node2.world_transform().unwrap();
+                            // proximity and predict does not work correctly for mesh
                             let dist = query::distance(
                                 &(trans1 * obj1.1),
                                 &*obj1.0,
@@ -314,7 +314,7 @@ where
                                 &*obj2.0,
                             );
                             if dist < self.prediction {
-                                println!("name: {}, name: {} dist={}", j1, j2, dist);
+                                debug!("name: {}, name: {} dist={}", j1, j2, dist);
                                 names.push((j1.to_owned(), j2.to_owned()));
                                 if first_return {
                                     return Ok(names);
