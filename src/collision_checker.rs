@@ -19,7 +19,6 @@ use na::{self, RealField, Vector3};
 use ncollide3d;
 use ncollide3d::procedural::IndexBuffer::{Split, Unified};
 use ncollide3d::query;
-use ncollide3d::query::Proximity;
 use ncollide3d::shape::{Ball, Compound, Cuboid, Cylinder, Shape, ShapeHandle, TriMesh};
 use ncollide3d::transformation::ToTriMesh;
 use std::collections::HashMap;
