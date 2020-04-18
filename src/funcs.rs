@@ -72,7 +72,7 @@ where
         .collect()
 }
 
-/// Find the nearest angle on is for the joints wihout limits
+/// Find the nearest angle on is for the joints without limits
 pub fn modify_to_nearest_angle<T>(
     vec1: &[T],
     vec2: &mut [T],
