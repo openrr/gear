@@ -351,7 +351,7 @@ struct Opt {
     self_collision_pair: Vec<String>,
 }
 
-fn main() {
+fn main() -> Result<(), gear::Error> {
     env_logger::init().unwrap();
     let opt = Opt::from_args();
     let mut app = CollisionAvoidApp::new(
@@ -361,7 +361,8 @@ fn main() {
         opt.ignore_rotation_x,
         opt.ignore_rotation_y,
         opt.ignore_rotation_z,
-        gear::parse_colon_separated_pairs(&opt.self_collision_pair),
+        gear::parse_colon_separated_pairs(&opt.self_collision_pair)?,
     );
     app.run();
+    Ok(())
 }
