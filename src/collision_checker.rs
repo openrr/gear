@@ -141,6 +141,7 @@ where
     }
 }
 
+#[derive(Clone)]
 /// Collision checker for a robot
 pub struct CollisionChecker<T>
 where
