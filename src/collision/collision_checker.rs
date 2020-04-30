@@ -244,6 +244,18 @@ pub trait FromUrdf {
     }
 }
 
+/// Parse args to get self collision pair
+///
+/// # Example
+///
+/// ```
+/// let pairs = gear::parse_colon_separated_pairs(&vec!["ab:cd".to_owned(), "ab:ef".to_owned()]).unwrap();
+/// assert_eq!(pairs.len(), 2);
+/// assert_eq!(pairs[0].0, "ab");
+/// assert_eq!(pairs[0].1, "cd");
+/// assert_eq!(pairs[1].0, "ab");
+/// assert_eq!(pairs[1].1, "ef");
+/// ```
 pub fn parse_colon_separated_pairs(pair_strs: &[String]) -> Result<Vec<(String, String)>> {
     let mut pairs = Vec::new();
     for pair_str in pair_strs {

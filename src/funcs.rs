@@ -82,7 +82,15 @@ where
         .collect()
 }
 
-/// Find the nearest angle on is for the joints without limits
+/// If the joint has no limit, select the nearest value from (x + 2pi *).
+///
+/// ```
+/// let mut a = vec![0.1f64, 10.0];
+/// let limits = vec![Some(k::joint::Range::new(0.0, 0.2)), None];
+/// gear::modify_to_nearest_angle(&vec![1.0, 0.5], &mut a, &limits);
+/// assert_eq!(a[0], 0.1, "no change");
+/// assert!((a[1] - 3.716814).abs() < 0.000001);
+/// ```
 pub fn modify_to_nearest_angle<T>(vec1: &[T], vec2: &mut [T], limits: &Limits<T>)
 where
     T: RealField,
@@ -106,11 +114,23 @@ where
     }
 }
 
+/// Struct for a point of a trajectory with multiple dimensions.
 #[derive(Debug, Clone)]
 pub struct TrajectoryPoint<T> {
     pub position: Vec<T>,
     pub velocity: Vec<T>,
     pub acceleration: Vec<T>,
+}
+
+impl<T> TrajectoryPoint<T> {
+    /// Create trajectory point
+    pub fn new(position: Vec<T>, velocity: Vec<T>, acceleration: Vec<T>) -> Self {
+        Self {
+            position,
+            velocity,
+            acceleration,
+        }
+    }
 }
 
 /// Interpolate two vectors with the length

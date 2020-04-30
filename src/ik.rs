@@ -15,11 +15,10 @@ limitations under the License.
 */
 #![allow(clippy::trivially_copy_pass_by_ref)]
 
+use crate::funcs::*;
 use k::InverseKinematicsSolver;
 use na::RealField;
 use nalgebra as na;
-
-use crate::funcs::*;
 
 /// Randomize initial joint angles before solving
 #[derive(Debug)]
@@ -83,6 +82,7 @@ where
     }
 }
 
+/// Check the poses which can be reached by the robot arm
 pub fn get_reachable_region<T, I>(
     ik_solver: &I,
     arm: &k::SerialChain<T>,
