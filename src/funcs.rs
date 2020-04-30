@@ -14,14 +14,12 @@ See the License for the specific language governing permissions and
 limitations under the License.
 */
 
-use k;
-use na::{self, RealField};
+use na::RealField;
 use num_traits::Float;
-use rand;
 use std::f64::consts::PI;
 use trajectory::{CubicSpline, Trajectory};
 
-use errors::*;
+use crate::errors::*;
 
 /// Clamp joint angles to set angles safely
 pub fn generate_clamped_joint_positions_from_limits<T>(

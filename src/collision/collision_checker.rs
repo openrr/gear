@@ -13,133 +13,15 @@ WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
 See the License for the specific language governing permissions and
 limitations under the License.
 */
-use assimp;
-use k;
-use na::{self, RealField, Vector3};
-use ncollide3d;
-use ncollide3d::procedural::IndexBuffer::{Split, Unified};
-use ncollide3d::query;
-use ncollide3d::shape::{Ball, Compound, Cuboid, Cylinder, Shape, ShapeHandle, TriMesh};
-use ncollide3d::transformation::ToTriMesh;
-use std::collections::HashMap;
-use std::path::Path;
-use urdf_rs;
+use super::urdf::urdf_geometry_to_shape_handle;
+use na::RealField;
+use ncollide3d::{
+    query,
+    shape::{Compound, Shape, ShapeHandle},
+};
+use std::{collections::HashMap, path::Path};
 
-use errors::*;
-
-fn load_mesh<P, T>(filename: P, scale: &[f64]) -> Result<TriMesh<T>>
-where
-    P: AsRef<Path>,
-    T: RealField,
-{
-    let mut importer = assimp::Importer::new();
-    importer.pre_transform_vertices(|x| x.enable = true);
-    importer.collada_ignore_up_direction(true);
-    let file_string = filename
-        .as_ref()
-        .to_str()
-        .ok_or("faild to get string from path")?;
-    Ok(assimp_scene_to_ncollide_mesh(
-        importer.read_file(file_string)?,
-        scale,
-    ))
-}
-
-fn assimp_scene_to_ncollide_mesh<T>(scene: assimp::Scene, scale: &[f64]) -> TriMesh<T>
-where
-    T: RealField,
-{
-    let mut vertices = Vec::new();
-    let mut indices = Vec::new();
-    let mut last_index: usize = 0;
-    for mesh in scene.mesh_iter() {
-        vertices.extend(mesh.vertex_iter().map(|v| {
-            na::Point3::<T>::new(
-                na::convert(v.x as f64 * scale[0]),
-                na::convert(v.y as f64 * scale[1]),
-                na::convert(v.z as f64 * scale[2]),
-            )
-        }));
-        indices.extend(mesh.face_iter().filter_map(|f| {
-            if f.num_indices == 3 {
-                Some(na::Point3::<usize>::new(
-                    f[0] as usize + last_index,
-                    f[1] as usize + last_index,
-                    f[2] as usize + last_index,
-                ))
-            } else {
-                None
-            }
-        }));
-        last_index = vertices.len() as usize;
-    }
-    TriMesh::new(vertices, indices, None)
-}
-
-fn urdf_geometry_to_shape_handle<T>(
-    collision_geometry: &urdf_rs::Geometry,
-    base_dir: Option<&Path>,
-) -> Option<ShapeHandle<T>>
-where
-    T: RealField,
-{
-    match *collision_geometry {
-        urdf_rs::Geometry::Box { ref size } => {
-            let cube = Cuboid::new(Vector3::new(
-                na::convert(size[0] * 0.5),
-                na::convert(size[1] * 0.5),
-                na::convert(size[2] * 0.5),
-            ));
-            Some(ShapeHandle::new(cube))
-        }
-        urdf_rs::Geometry::Cylinder { radius, length } => {
-            let y_cylinder = Cylinder::new(na::convert(length * 0.5), na::convert(radius));
-            let tri_mesh = ncollide3d::transformation::convex_hull(
-                &y_cylinder
-                    .to_trimesh(30)
-                    .coords
-                    .iter()
-                    .map(|point| point.xzy())
-                    .collect::<Vec<_>>(),
-            );
-            let ind = match tri_mesh.indices {
-                Unified(ind) => ind
-                    .into_iter()
-                    .map(|p| na::Point3::new(p[0] as usize, p[1] as usize, p[2] as usize))
-                    .collect(),
-                Split(_) => {
-                    panic!("convex_hull implemenataion has been changed by ncollide3d update?");
-                }
-            };
-            Some(ShapeHandle::new(TriMesh::new(
-                tri_mesh.coords,
-                ind,
-                tri_mesh.uvs,
-            )))
-        }
-        urdf_rs::Geometry::Sphere { radius } => {
-            Some(ShapeHandle::new(Ball::new(na::convert(radius))))
-        }
-        urdf_rs::Geometry::Mesh {
-            ref filename,
-            scale,
-        } => {
-            let replaced_filename = urdf_rs::utils::expand_package_path(filename, base_dir);
-            let path = Path::new(&replaced_filename);
-            if !path.exists() {
-                error!("{} not found", replaced_filename);
-                return None;
-            }
-            match load_mesh(path, &scale) {
-                Ok(mesh) => Some(ShapeHandle::new(mesh)),
-                Err(err) => {
-                    error!("load_mesh {:?} failed: {}", path, err);
-                    None
-                }
-            }
-        }
-    }
-}
+use crate::errors::*;
 
 #[derive(Clone)]
 /// Collision checker for a robot

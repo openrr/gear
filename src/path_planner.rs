@@ -13,17 +13,11 @@ WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
 See the License for the specific language governing permissions and
 limitations under the License.
 */
-use k;
-use na;
+use crate::collision::CollisionChecker;
+use crate::errors::*;
+use crate::funcs::*;
 use ncollide3d::shape::Compound;
-use num_traits;
-use rrt;
 use std::path::Path;
-use urdf_rs;
-
-use collision_checker::*;
-use errors::*;
-use funcs::*;
 
 use na::RealField;
 

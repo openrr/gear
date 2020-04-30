@@ -13,16 +13,10 @@ WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
 See the License for the specific language governing permissions and
 limitations under the License.
 */
-use k;
-use na;
-use ncollide3d::shape::Compound;
-use num_traits;
-use urdf_rs;
-
-use errors::*;
-use path_planner::JointPathPlanner;
-
+use crate::errors::*;
+use crate::path_planner::JointPathPlanner;
 use na::RealField;
+use ncollide3d::shape::Compound;
 
 /// Joint path planner which supports inverse kinematics
 pub struct JointPathPlannerWithIK<T, I>

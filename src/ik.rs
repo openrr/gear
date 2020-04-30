@@ -14,10 +14,10 @@ See the License for the specific language governing permissions and
 limitations under the License.
 */
 
-use k::{self, InverseKinematicsSolver};
-use na::{self, RealField};
+use k::InverseKinematicsSolver;
+use na::RealField;
 
-use funcs::*;
+use crate::funcs::*;
 
 /// Randomize initial joint angles before solving
 #[derive(Debug)]

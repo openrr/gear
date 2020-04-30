@@ -9,6 +9,7 @@ categories = ["algorithms"]
 repository = "https://github.com/OTL/gear"
 documentation = "http://docs.rs/gear"
 readme = "README.md"
+edition="2018"
 
 [dependencies]
 failure = "0.1"
