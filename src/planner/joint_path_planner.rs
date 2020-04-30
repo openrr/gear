@@ -16,10 +16,10 @@ limitations under the License.
 use crate::collision::CollisionChecker;
 use crate::errors::*;
 use crate::funcs::*;
+use na::RealField;
+use nalgebra as na;
 use ncollide3d::shape::Compound;
 use std::path::Path;
-
-use na::RealField;
 
 /// Collision Avoidance Path Planner
 pub struct JointPathPlanner<N>

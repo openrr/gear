@@ -17,6 +17,7 @@ limitations under the License.
 
 use k::InverseKinematicsSolver;
 use na::RealField;
+use nalgebra as na;
 
 use crate::funcs::*;
 

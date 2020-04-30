@@ -14,14 +14,15 @@ See the License for the specific language governing permissions and
 limitations under the License.
 */
 use super::urdf::urdf_geometry_to_shape_handle;
+use crate::errors::*;
+use log::*;
 use na::RealField;
+use nalgebra as na;
 use ncollide3d::{
     query,
     shape::{Compound, Shape, ShapeHandle},
 };
 use std::{collections::HashMap, path::Path};
-
-use crate::errors::*;
 type NameShapeMap<T> = HashMap<String, Vec<(ShapeHandle<T>, na::Isometry3<T>)>>;
 
 #[derive(Clone)]

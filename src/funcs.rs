@@ -17,6 +17,7 @@ limitations under the License.
 
 use crate::errors::*;
 use na::RealField;
+use nalgebra as na;
 use num_traits::Float;
 use std::f64::consts::PI;
 use trajectory::{CubicSpline, Trajectory};

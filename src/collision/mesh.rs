@@ -1,6 +1,6 @@
 use crate::errors::*;
-use assimp;
 use k::RealField;
+use nalgebra as na;
 use ncollide3d::shape::TriMesh;
 use std::path::Path;
 

@@ -18,12 +18,6 @@ limitations under the License.
 //! Get the collision free trajectory of joint angles. `ncollide3d` is used to check the
 //! collision between the robot and the environment.
 //!
-#[macro_use]
-extern crate failure;
-#[macro_use]
-extern crate log;
-extern crate nalgebra as na;
-
 mod errors;
 pub use errors::*;
 

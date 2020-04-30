@@ -1,5 +1,7 @@
 use super::mesh::load_mesh;
-use na::{RealField, Vector3};
+use k::{RealField, Vector3};
+use log::*;
+use nalgebra as na;
 use ncollide3d::procedural::IndexBuffer::{Split, Unified};
 use ncollide3d::shape::{Ball, Cuboid, Cylinder, ShapeHandle, TriMesh};
 use ncollide3d::transformation::ToTriMesh;

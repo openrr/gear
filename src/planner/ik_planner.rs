@@ -17,6 +17,7 @@ limitations under the License.
 use super::joint_path_planner::JointPathPlanner;
 use crate::errors::*;
 use na::RealField;
+use nalgebra as na;
 use ncollide3d::shape::Compound;
 
 /// Joint path planner which supports inverse kinematics
