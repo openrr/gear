@@ -13,6 +13,7 @@ WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
 See the License for the specific language governing permissions and
 limitations under the License.
 */
+#![allow(clippy::trivially_copy_pass_by_ref)]
 
 use k::InverseKinematicsSolver;
 use na::RealField;
@@ -40,8 +41,8 @@ where
 {
     pub fn new(solver: I, num_max_try: usize) -> Self {
         RandomInitializeIKSolver {
-            solver: solver,
-            num_max_try: num_max_try,
+            solver,
+            num_max_try,
             phantom: ::std::marker::PhantomData,
         }
     }
@@ -61,7 +62,7 @@ where
         let mut result = Err(k::IKError::NotConvergedError {
             error: "fail".to_owned(),
         });
-        let limits = arm.iter_joints().map(|j| j.limits.clone()).collect();
+        let limits = arm.iter_joints().map(|j| j.limits).collect();
         let initial_angles = arm.joint_positions();
 
         for _ in 0..self.num_max_try {
@@ -97,7 +98,7 @@ where
     let initial_angles = arm.joint_positions();
     let mut z = min_point[2];
     let mut solved_poses = Vec::new();
-    let mut target_pose = initial_pose.clone();
+    let mut target_pose = *initial_pose;
     while z < max_point[2] {
         target_pose.translation.vector[2] = z;
         let mut y = min_point[1];
@@ -109,7 +110,7 @@ where
                 target_pose.translation.vector[0] = x;
                 arm.set_joint_positions_unchecked(&initial_angles);
                 if ik_solver
-                    .solve_with_constraints(arm, &target_pose, constraints)
+                    .solve_with_constraints(arm, &target_pose, &constraints)
                     .is_ok()
                 {
                     solved_poses.push(target_pose.clone());

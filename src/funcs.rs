@@ -13,18 +13,20 @@ WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
 See the License for the specific language governing permissions and
 limitations under the License.
 */
+#![allow(clippy::trivially_copy_pass_by_ref, clippy::ptr_arg)]
 
+use crate::errors::*;
 use na::RealField;
 use num_traits::Float;
 use std::f64::consts::PI;
 use trajectory::{CubicSpline, Trajectory};
 
-use crate::errors::*;
+type Limits<T> = Vec<Option<k::joint::Range<T>>>;
 
 /// Clamp joint angles to set angles safely
 pub fn generate_clamped_joint_positions_from_limits<T>(
     angles: &[T],
-    limits: &Vec<Option<k::joint::Range<T>>>,
+    limits: &Limits<T>,
 ) -> Result<Vec<T>>
 where
     T: RealField,
@@ -39,12 +41,10 @@ where
             Some(ref range) => {
                 if *angle > range.max {
                     range.max
+                } else if *angle < range.min {
+                    range.min
                 } else {
-                    if *angle < range.min {
-                        range.min
-                    } else {
-                        *angle
-                    }
+                    *angle
                 }
             }
             None => *angle,
@@ -59,7 +59,7 @@ pub fn set_clamped_joint_positions<T>(chain: &k::Chain<T>, vec: &[T]) -> Result<
 where
     T: RealField,
 {
-    let limits = chain.iter_joints().map(|j| j.limits).collect();
+    let limits = chain.iter_joints().map(|j| j.limits).collect::<Vec<_>>();
     let clamped = generate_clamped_joint_positions_from_limits(vec, &limits)?;
     chain.set_joint_positions(&clamped)?;
     Ok(())
@@ -68,9 +68,7 @@ where
 /// Generate random joint angles from the optional limits
 ///
 /// If the limit is None, -PI <-> PI is used.
-pub fn generate_random_joint_positions_from_limits<T>(
-    limits: &Vec<Option<k::joint::Range<T>>>,
-) -> Vec<T>
+pub fn generate_random_joint_positions_from_limits<T>(limits: &Limits<T>) -> Vec<T>
 where
     T: RealField,
 {
@@ -84,11 +82,8 @@ where
 }
 
 /// Find the nearest angle on is for the joints without limits
-pub fn modify_to_nearest_angle<T>(
-    vec1: &[T],
-    vec2: &mut [T],
-    limits: &Vec<Option<k::joint::Range<T>>>,
-) where
+pub fn modify_to_nearest_angle<T>(vec1: &[T], vec2: &mut [T], limits: &Limits<T>)
+where
     T: RealField,
 {
     assert_eq!(vec1.len(), vec2.len());
@@ -121,7 +116,7 @@ pub struct TrajectoryPoint<T> {
 ///
 /// returns vector of (position, velocity, acceleration)
 pub fn interpolate<T>(
-    points: &Vec<Vec<T>>,
+    points: &[Vec<T>],
     total_duration: T,
     unit_duration: T,
 ) -> Option<Vec<TrajectoryPoint<T>>>
@@ -134,7 +129,7 @@ where
         times.push(key_frame_unit_duration * T::from(i)?);
     }
     assert_eq!(times.len(), points.len());
-    let spline = CubicSpline::new(times, points.clone())?;
+    let spline = CubicSpline::new(times, points.to_vec())?;
     let mut t = T::zero();
     let mut ret = Vec::new();
     while t < total_duration {
@@ -155,7 +150,7 @@ pub fn set_random_joint_positions<T>(
 where
     T: RealField,
 {
-    let limits = robot.iter_joints().map(|j| j.limits.clone()).collect();
+    let limits = robot.iter_joints().map(|j| j.limits).collect();
     robot.set_joint_positions(&generate_random_joint_positions_from_limits(&limits))
 }
 

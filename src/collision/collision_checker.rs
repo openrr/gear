@@ -22,6 +22,7 @@ use ncollide3d::{
 use std::{collections::HashMap, path::Path};
 
 use crate::errors::*;
+type NameShapeMap<T> = HashMap<String, Vec<(ShapeHandle<T>, na::Isometry3<T>)>>;
 
 #[derive(Clone)]
 /// Collision checker for a robot
@@ -29,7 +30,7 @@ pub struct CollisionChecker<T>
 where
     T: RealField,
 {
-    name_collision_model_map: HashMap<String, Vec<(ShapeHandle<T>, na::Isometry3<T>)>>,
+    name_collision_model_map: NameShapeMap<T>,
     /// margin length for collision check
     pub prediction: T,
     pub self_collision_pairs: Vec<(String, String)>,
@@ -40,10 +41,7 @@ where
     T: RealField,
 {
     /// Create CollisionChecker from HashMap
-    pub fn new(
-        name_collision_model_map: HashMap<String, Vec<(ShapeHandle<T>, na::Isometry3<T>)>>,
-        prediction: T,
-    ) -> Self {
+    pub fn new(name_collision_model_map: NameShapeMap<T>, prediction: T) -> Self {
         CollisionChecker {
             name_collision_model_map,
             prediction,
@@ -108,6 +106,13 @@ where
         self.colliding_link_names_with_first_return_flag(robot, target_shape, target_pose, false)
     }
 
+    /// Check collision and return the names of the link(joint) names
+    ///
+    /// robot: robot model
+    /// target_shape: Check collision with this shape and the robot
+    /// target_pose: Check collision with this shape in this pose and the robot
+    /// first_return: if true the function returns immediately when it found a collision.
+    /// This flag is to make it fast.
     pub fn colliding_link_names_with_first_return_flag(
         &self,
         robot: &k::Chain<T>,
@@ -171,7 +176,12 @@ where
             false,
         )
     }
-    // self
+    /// Check self collision and return the names of the link(joint) names
+    ///
+    /// robot: robot model
+    /// self_collision_pairs: pairs of the names of the link(joint)
+    /// first_return: if true the function returns immediately when it found a collision.
+    /// This flag is to make it fast.
     pub fn self_colliding_link_names_with_first_return_flag(
         &self,
         collision_check_robot: &k::Chain<T>,
@@ -236,7 +246,7 @@ pub trait FromUrdf {
 pub fn parse_colon_separated_pairs(pair_strs: &[String]) -> Result<Vec<(String, String)>> {
     let mut pairs = Vec::new();
     for pair_str in pair_strs {
-        let mut sp = pair_str.split(":");
+        let mut sp = pair_str.split(':');
         if let Some(p1) = sp.next() {
             if let Some(p2) = sp.next() {
                 pairs.push((p1.to_owned(), p2.to_owned()));

@@ -13,6 +13,7 @@ WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
 See the License for the specific language governing permissions and
 limitations under the License.
 */
+#![allow(clippy::trivially_copy_pass_by_ref)]
 use super::joint_path_planner::JointPathPlanner;
 use crate::errors::*;
 use na::RealField;
@@ -61,6 +62,8 @@ where
     pub fn urdf_robot(&self) -> &Option<urdf_rs::Robot> {
         &self.path_planner.urdf_robot
     }
+
+    /// Just solve IK and do not plan
     pub fn solve_ik(
         &mut self,
         arm: &k::SerialChain<T>,
@@ -68,6 +71,7 @@ where
     ) -> Result<()> {
         Ok(self.ik_solver.solve(arm, target_pose)?)
     }
+    /// Just solve IK with constraints and do not plan
     pub fn solve_ik_with_constraints(
         &mut self,
         arm: &k::SerialChain<T>,
@@ -76,9 +80,12 @@ where
     ) -> Result<()> {
         Ok(self.ik_solver.solve_with_constraints(arm, target_pose, c)?)
     }
+
     pub fn colliding_link_names(&self, objects: &Compound<T>) -> Vec<String> {
         self.path_planner.colliding_link_names(objects)
     }
+
+    /// Solve IK and get the path to the final joint positions
     pub fn plan_with_ik(
         &mut self,
         target_name: &str,
@@ -92,6 +99,8 @@ where
             &k::Constraints::default(),
         )
     }
+
+    /// Solve IK with constraints and get the path to the final joint positions
     pub fn plan_with_ik_with_constraints(
         &mut self,
         target_name: &str,
@@ -106,12 +115,13 @@ where
             .ok_or(format!("{} not found", target_name))?;
         let arm = k::SerialChain::from_end(end_link);
         let initial = arm.joint_positions();
-        let _ = self
-            .ik_solver
+        self.ik_solver
             .solve_with_constraints(&arm, target_pose, constraints)?;
         let goal = arm.joint_positions();
         self.path_planner.plan(&arm, &initial, &goal, objects)
     }
+
+    /// Do not solve IK but get the path to the target joint positions
     pub fn plan_joints<K>(
         &mut self,
         use_joints: &k::Chain<T>,

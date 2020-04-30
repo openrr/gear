@@ -117,10 +117,7 @@ where
         goal_angles: &[N],
         objects: &Compound<N>,
     ) -> Result<Vec<Vec<N>>> {
-        let limits = using_joints
-            .iter_joints()
-            .map(|j| j.limits.clone())
-            .collect();
+        let limits = using_joints.iter_joints().map(|j| j.limits).collect();
         let step_length = self.step_length;
         let max_try = self.max_try;
         let current_angles = using_joints.joint_positions();
@@ -195,8 +192,8 @@ where
     /// There are also some utility functions to create from urdf
     pub fn new(collision_check_robot: k::Chain<N>, collision_checker: CollisionChecker<N>) -> Self {
         JointPathPlannerBuilder {
-            collision_check_robot: collision_check_robot,
-            collision_checker: collision_checker,
+            collision_check_robot,
+            collision_checker,
             step_length: na::convert(0.1),
             max_try: 5000,
             num_smoothing: 100,
