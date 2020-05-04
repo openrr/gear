@@ -78,11 +78,12 @@ where
     /// Check if there are any colliding links
     pub fn has_any_colliding(&self, objects: &Compound<N>) -> bool {
         for shape in objects.shapes() {
-            if self.collision_checker.has_any_colliding(
-                &self.collision_check_robot,
-                &*shape.1,
-                &shape.0,
-            ) {
+            if self
+                .collision_checker
+                .check_env(&self.collision_check_robot, &*shape.1, &shape.0)
+                .next()
+                .is_none()
+            {
                 return true;
             }
         }
@@ -92,11 +93,10 @@ where
     pub fn colliding_link_names(&self, objects: &Compound<N>) -> Vec<String> {
         let mut ret = Vec::new();
         for shape in objects.shapes() {
-            let mut colliding_names = self.collision_checker.colliding_link_names(
-                &self.collision_check_robot,
-                &*shape.1,
-                &shape.0,
-            );
+            let mut colliding_names = self
+                .collision_checker
+                .check_env(&self.collision_check_robot, &*shape.1, &shape.0)
+                .collect();
             ret.append(&mut colliding_names);
         }
         ret
@@ -295,7 +295,7 @@ mod tests {
 
         let robot = k::Chain::<f32>::from(&urdf_robot);
 
-        let names = checker.colliding_link_names(&robot, &target, &target_pose);
+        let names: Vec<String> = checker.check_env(&robot, &target, &target_pose).collect();
         assert_eq!(
             names,
             vec![
@@ -308,7 +308,7 @@ mod tests {
         );
         let angles = vec![-1.3, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0];
         robot.set_joint_positions(&angles).unwrap();
-        let names = checker.colliding_link_names(&robot, &target, &target_pose);
+        let names: Vec<String> = checker.check_env(&robot, &target, &target_pose).collect();
         assert_eq!(
             names,
             vec![
@@ -319,7 +319,7 @@ mod tests {
             ]
         );
         let target_pose = Isometry3::new(Vector3::new(0.7, 0.0, 0.0), na::zero());
-        let names = checker.colliding_link_names(&robot, &target, &target_pose);
+        let names: Vec<String> = checker.check_env(&robot, &target, &target_pose).collect();
         assert_eq!(
             names,
             vec![

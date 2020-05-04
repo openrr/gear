@@ -25,6 +25,157 @@ use ncollide3d::{
 use std::{collections::HashMap, path::Path};
 type NameShapeMap<T> = HashMap<String, Vec<(ShapeHandle<T>, na::Isometry3<T>)>>;
 
+pub struct EnvCollisionNames<'a, 'b, T>
+where
+    T: RealField,
+{
+    checker: &'a CollisionChecker<T>,
+    target_shape: &'b dyn Shape<T>,
+    target_pose: &'b na::Isometry3<T>,
+    joints: Vec<&'b k::Node<T>>,
+    index: usize,
+}
+
+impl<'a, 'b, T> EnvCollisionNames<'a, 'b, T>
+where
+    T: RealField,
+{
+    pub fn new(
+        checker: &'a CollisionChecker<T>,
+        robot: &'b k::Chain<T>,
+        target_shape: &'b dyn Shape<T>,
+        target_pose: &'b na::Isometry3<T>,
+    ) -> Self {
+        robot.update_transforms();
+        let joints = robot.iter().collect();
+        Self {
+            checker,
+            target_shape,
+            target_pose,
+            joints,
+            index: 0,
+        }
+    }
+}
+
+impl<'a, 'b, T> Iterator for EnvCollisionNames<'a, 'b, T>
+where
+    T: RealField,
+{
+    type Item = String;
+    fn next(&mut self) -> Option<String> {
+        if self.joints.len() <= self.index {
+            return None;
+        }
+        let joint = self.joints[self.index];
+        self.index += 1;
+        let trans = joint.world_transform().unwrap();
+        let joint_name = &joint.joint().name;
+        match self.checker.name_collision_model_map.get(joint_name) {
+            Some(obj_vec) => {
+                for obj in obj_vec {
+                    // proximity and prediction does not work for meshes.
+                    let dist = query::distance(
+                        &(trans * obj.1),
+                        &*obj.0,
+                        self.target_pose,
+                        self.target_shape,
+                    );
+                    if dist < self.checker.prediction {
+                        debug!("name: {}, dist={}", joint_name, dist);
+                        return Some(joint_name.to_owned());
+                    }
+                }
+            }
+            None => {
+                debug!("collision model {} not found", joint_name);
+            }
+        }
+        self.next()
+    }
+}
+
+pub struct SelfCollisionPairs<'a, T>
+where
+    T: RealField,
+{
+    checker: &'a CollisionChecker<T>,
+    collision_check_robot: &'a k::Chain<T>,
+    self_collision_pairs: &'a [(String, String)],
+    index: usize,
+}
+
+impl<'a, T> SelfCollisionPairs<'a, T>
+where
+    T: RealField,
+{
+    pub fn new(
+        checker: &'a CollisionChecker<T>,
+        collision_check_robot: &'a k::Chain<T>,
+        self_collision_pairs: &'a [(String, String)],
+    ) -> Self {
+        collision_check_robot.update_transforms();
+        Self {
+            checker,
+            collision_check_robot,
+            self_collision_pairs,
+            index: 0,
+        }
+    }
+}
+
+impl<'a, T> Iterator for SelfCollisionPairs<'a, T>
+where
+    T: RealField,
+{
+    type Item = (String, String);
+    fn next(&mut self) -> Option<(String, String)> {
+        if self.self_collision_pairs.len() <= self.index {
+            return None;
+        }
+        let (j1, j2) = &self.self_collision_pairs[self.index];
+        self.index += 1;
+        let obj_vec1_opt = self.checker.name_collision_model_map.get(j1);
+        let obj_vec2_opt = self.checker.name_collision_model_map.get(j2);
+        if obj_vec1_opt.is_none() {
+            warn!("Collision model {} not found", j1);
+            return self.next();
+        }
+        if obj_vec2_opt.is_none() {
+            warn!("Collision model {} not found", j2);
+            return self.next();
+        }
+        let node1_opt = self.collision_check_robot.find(j1);
+        let node2_opt = self.collision_check_robot.find(j2);
+        if node1_opt.is_none() {
+            warn!("self_colliding: joint {} not found", j1);
+            return self.next();
+        }
+        if node2_opt.is_none() {
+            warn!("self_colliding: joint {} not found", j2);
+            return self.next();
+        }
+        let obj_vec1 = obj_vec1_opt.unwrap();
+        let obj_vec2 = obj_vec2_opt.unwrap();
+        let node1 = node1_opt.unwrap();
+        let node2 = node2_opt.unwrap();
+        for obj1 in obj_vec1 {
+            for obj2 in obj_vec2 {
+                let trans1 = node1.world_transform().unwrap();
+                let trans2 = node2.world_transform().unwrap();
+                // proximity and predict does not work correctly for mesh
+                let dist =
+                    query::distance(&(trans1 * obj1.1), &*obj1.0, &(trans2 * obj2.1), &*obj2.0);
+                debug!("name: {}, name: {} dist={}", j1, j2, dist);
+                if dist < self.checker.prediction {
+                    return Some((j1.to_owned(), j2.to_owned()));
+                }
+            }
+        }
+        self.next()
+    }
+}
+
 #[derive(Clone)]
 /// Collision checker for a robot
 pub struct CollisionChecker<T>
@@ -86,150 +237,30 @@ where
             self_collision_pairs: Vec::new(),
         }
     }
-    /// Check if there are any colliding links
-    pub fn has_any_colliding(
-        &self,
-        robot: &k::Chain<T>,
-        target_shape: &dyn Shape<T>,
-        target_pose: &na::Isometry3<T>,
-    ) -> bool {
-        !self
-            .colliding_link_names_with_first_return_flag(robot, target_shape, target_pose, true)
-            .is_empty()
-    }
-    /// Returns the names which is colliding with the target shape/pose
-    pub fn colliding_link_names(
-        &self,
-        robot: &k::Chain<T>,
-        target_shape: &dyn Shape<T>,
-        target_pose: &na::Isometry3<T>,
-    ) -> Vec<String> {
-        self.colliding_link_names_with_first_return_flag(robot, target_shape, target_pose, false)
-    }
-
-    /// Check collision and return the names of the link(joint) names
+    /// Check collision between environmental object and returns the names of the link(joint) names
     ///
     /// robot: robot model
     /// target_shape: Check collision with this shape and the robot
     /// target_pose: Check collision with this shape in this pose and the robot
-    /// first_return: if true the function returns immediately when it found a collision.
-    /// This flag is to make it fast.
-    pub fn colliding_link_names_with_first_return_flag(
-        &self,
-        robot: &k::Chain<T>,
-        target_shape: &dyn Shape<T>,
-        target_pose: &na::Isometry3<T>,
-        first_return: bool,
-    ) -> Vec<String> {
-        let mut names = Vec::new();
-        robot.update_transforms();
-        for joint in robot.iter() {
-            let trans = joint.world_transform().unwrap();
-            let joint_name = &joint.joint().name;
-            match self.name_collision_model_map.get(joint_name) {
-                Some(obj_vec) => {
-                    for obj in obj_vec {
-                        // proximity and prediction does not work for meshes.
-                        let dist =
-                            query::distance(&(trans * obj.1), &*obj.0, target_pose, target_shape);
-                        if dist < self.prediction {
-                            debug!("name: {}, dist={}", joint_name, dist);
-                            names.push(joint_name.to_owned());
-                            if first_return {
-                                return names;
-                            } else {
-                                break;
-                            }
-                        }
-                    }
-                }
-                None => {
-                    debug!("collision model {} not found", joint_name);
-                }
-            }
-        }
-        names
+    pub fn check_env<'a>(
+        &'a self,
+        robot: &'a k::Chain<T>,
+        target_shape: &'a dyn Shape<T>,
+        target_pose: &'a na::Isometry3<T>,
+    ) -> EnvCollisionNames<T> {
+        EnvCollisionNames::new(self, robot, target_shape, target_pose)
     }
 
-    /// Check if there are any self colliding links
-    pub fn has_self_collision(
-        &self,
-        collision_check_robot: &k::Chain<T>,
-        self_collision_pairs: &[(String, String)],
-    ) -> Result<bool> {
-        Ok(!self
-            .self_colliding_link_names_with_first_return_flag(
-                collision_check_robot,
-                self_collision_pairs,
-                true,
-            )?
-            .is_empty())
-    }
-    /// Returns the names which is colliding with the target shape/pose
-    pub fn self_colliding_link_names(
-        &self,
-        collision_check_robot: &k::Chain<T>,
-        self_collision_pairs: &[(String, String)],
-    ) -> Result<Vec<(String, String)>> {
-        self.self_colliding_link_names_with_first_return_flag(
-            collision_check_robot,
-            self_collision_pairs,
-            false,
-        )
-    }
     /// Check self collision and return the names of the link(joint) names
     ///
     /// robot: robot model
     /// self_collision_pairs: pairs of the names of the link(joint)
-    /// first_return: if true the function returns immediately when it found a collision.
-    /// This flag is to make it fast.
-    pub fn self_colliding_link_names_with_first_return_flag(
-        &self,
-        collision_check_robot: &k::Chain<T>,
-        self_collision_pairs: &[(String, String)],
-        first_return: bool,
-    ) -> Result<Vec<(String, String)>> {
-        let mut names = Vec::new();
-        collision_check_robot.update_transforms();
-        for (j1, j2) in self_collision_pairs {
-            if let Some(obj_vec1) = self.name_collision_model_map.get(j1) {
-                if let Some(obj_vec2) = self.name_collision_model_map.get(j2) {
-                    let node1_opt = collision_check_robot.find(j1);
-                    let node2_opt = collision_check_robot.find(j2);
-                    if node1_opt.is_none() {
-                        return Err(format!("self_colliding: {} not found", j1).into());
-                    }
-                    if node2_opt.is_none() {
-                        return Err(format!("self_colliding: {} not found", j2).into());
-                    }
-                    let node1 = node1_opt.unwrap();
-                    let node2 = node2_opt.unwrap();
-                    for obj1 in obj_vec1 {
-                        for obj2 in obj_vec2 {
-                            let trans1 = node1.world_transform().unwrap();
-                            let trans2 = node2.world_transform().unwrap();
-                            // proximity and predict does not work correctly for mesh
-                            let dist = query::distance(
-                                &(trans1 * obj1.1),
-                                &*obj1.0,
-                                &(trans2 * obj2.1),
-                                &*obj2.0,
-                            );
-                            debug!("name: {}, name: {} dist={}", j1, j2, dist);
-                            if dist < self.prediction {
-                                names.push((j1.to_owned(), j2.to_owned()));
-                                if first_return {
-                                    return Ok(names);
-                                } else {
-                                    break;
-                                }
-                            }
-                        }
-                    }
-                }
-            }
-        }
-        Ok(names)
+    pub fn check_self<'a>(
+        &'a self,
+        collision_check_robot: &'a k::Chain<T>,
+        self_collision_pairs: &'a [(String, String)],
+    ) -> SelfCollisionPairs<T> {
+        SelfCollisionPairs::new(self, collision_check_robot, self_collision_pairs)
     }
 }
 

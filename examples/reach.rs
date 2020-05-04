@@ -256,18 +256,15 @@ impl CollisionAvoidApp {
                         }
                         Key::S => {
                             self.reset_colliding_link_colors();
-                            let pairs = self
+                            let pairs: Vec<_> = self
                                 .planner
                                 .path_planner
                                 .collision_checker
-                                .self_colliding_link_names(
+                                .check_self(
                                     &self.planner.path_planner.collision_check_robot,
                                     &self.self_collision_pairs,
                                 )
-                                .unwrap_or_else(|e| {
-                                    println!("{:?}", e);
-                                    vec![]
-                                });
+                                .collect();
                             self.colliding_link_names.clear();
                             for p in pairs {
                                 self.colliding_link_names.push(p.0);
