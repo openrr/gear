@@ -143,7 +143,7 @@ where
             Ok(p) => p,
             Err(error) => {
                 using_joints.set_joint_positions(&current_angles)?;
-                return Err(Error::from(error));
+                return Err(Error::PathPlanFail(error));
             }
         };
         let num_smoothing = self.num_smoothing;

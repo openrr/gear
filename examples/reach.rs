@@ -358,7 +358,7 @@ fn main() -> Result<(), gear::Error> {
         opt.ignore_rotation_x,
         opt.ignore_rotation_y,
         opt.ignore_rotation_z,
-        gear::parse_colon_separated_pairs(&opt.self_collision_pair)?,
+        gear::collision::parse_colon_separated_pairs(&opt.self_collision_pair)?,
     );
     app.run();
     Ok(())

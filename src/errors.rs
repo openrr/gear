@@ -14,8 +14,8 @@ See the License for the specific language governing permissions and
 limitations under the License.
 */
 
-use failure::Fail;
 use std::io;
+use thiserror::Error;
 
 #[derive(Debug)]
 pub enum CollisionPart {
@@ -23,21 +23,29 @@ pub enum CollisionPart {
     End,
 }
 
-#[derive(Debug, Fail)]
+#[derive(Debug, Error)]
 /// Error for `gear`
 pub enum Error {
-    #[fail(display = "{:?}", error)]
+    #[error("{}", error)]
     Other { error: String },
-    #[fail(display = "Collision error: {:?} is colliding", part)]
+    #[error("Node name {} not found", .0)]
+    NotFound(String),
+    #[error("Collision error: {:?} is colliding", part)]
     Collision { part: CollisionPart },
-    #[fail(display = "IO error {:?}", error)]
+    #[error("IO error {:?}", error)]
     Io { error: io::Error },
-    #[fail(display = "URDF error: {:?}", error)]
+    #[error("DoF mismatch {} != {}", .0, .1)]
+    DofMismatch(usize, usize),
+    #[error("URDF error: {:?}", error)]
     Urdf { error: urdf_rs::UrdfError },
-    #[fail(display = "IK error: {:?}", error)]
+    #[error("IK error: {:?}", error)]
     Ik { error: k::IKError },
-    #[fail(display = "Joint error: {:?}", error)]
+    #[error("Path not found {}", .0)]
+    PathPlanFail(String),
+    #[error("Joint error: {:?}", error)]
     Joint { error: k::JointError },
+    #[error("failed to parse {}", .0)]
+    ParseError(String),
 }
 
 /// Result for `gear`
@@ -56,6 +64,7 @@ impl<'a> From<&'a str> for Error {
         }
     }
 }
+
 impl From<String> for Error {
     fn from(error: String) -> Error {
         Error::Other { error }

@@ -25,6 +25,7 @@ use ncollide3d::{
 use std::{collections::HashMap, path::Path};
 type NameShapeMap<T> = HashMap<String, Vec<(ShapeHandle<T>, na::Isometry3<T>)>>;
 
+/// Check collision between robot and object
 pub struct EnvCollisionNames<'a, 'b, T>
 where
     T: RealField,
@@ -95,6 +96,7 @@ where
     }
 }
 
+/// Check collision inside robot links (self collision checker)
 pub struct SelfCollisionPairs<'a, T>
 where
     T: RealField,
@@ -264,6 +266,7 @@ where
     }
 }
 
+/// Convert urdf object into gear/ncollide3d object
 pub trait FromUrdf {
     fn from_urdf_robot(robot: &urdf_rs::Robot) -> Self;
     fn from_urdf_file<P>(path: P) -> ::std::result::Result<Self, urdf_rs::UrdfError>
@@ -295,10 +298,10 @@ pub fn parse_colon_separated_pairs(pair_strs: &[String]) -> Result<Vec<(String, 
             if let Some(p2) = sp.next() {
                 pairs.push((p1.to_owned(), p2.to_owned()));
             } else {
-                return Err(format!("failed to parse {}", pair_str).into());
+                return Err(Error::ParseError(pair_str.to_owned()));
             }
         } else {
-            return Err(format!("failed to parse {}", pair_str).into());
+            return Err(Error::ParseError(pair_str.to_owned()));
         }
     }
     Ok(pairs)

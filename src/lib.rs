@@ -19,10 +19,10 @@ limitations under the License.
 //! collision between the robot and the environment.
 //!
 mod errors;
-pub use errors::*;
+pub use errors::Error;
 
-mod collision;
-pub use collision::*;
+pub mod collision;
+pub use collision::{CollisionChecker, FromUrdf};
 
 mod funcs;
 pub use funcs::*;

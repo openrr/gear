@@ -113,7 +113,7 @@ where
             .path_planner
             .collision_check_robot
             .find(target_name)
-            .ok_or(format!("{} not found", target_name))?;
+            .ok_or(Error::NotFound(target_name.to_owned()))?;
         let arm = k::SerialChain::from_end(end_link);
         let initial = arm.joint_positions();
         self.ik_solver

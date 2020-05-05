@@ -33,7 +33,7 @@ where
     T: RealField,
 {
     if angles.len() != limits.len() {
-        return Err(Error::from("size mismatch of input angles and limits"));
+        return Err(Error::DofMismatch(angles.len(), limits.len()));
     }
     Ok(limits
         .iter()
@@ -133,7 +133,7 @@ impl<T> TrajectoryPoint<T> {
     }
 }
 
-/// Interpolate two vectors with the length
+/// Interpolate position vectors
 ///
 /// returns vector of (position, velocity, acceleration)
 pub fn interpolate<T>(

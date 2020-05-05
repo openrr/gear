@@ -15,7 +15,7 @@ where
     let file_string = filename
         .as_ref()
         .to_str()
-        .ok_or("faild to get string from path")?;
+        .ok_or("faild to get string from path".to_owned())?;
     Ok(assimp_scene_to_ncollide_mesh(
         importer.read_file(file_string)?,
         scale,
