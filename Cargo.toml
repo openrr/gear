@@ -13,19 +13,19 @@ edition="2018"
 
 [dependencies]
 thiserror = "1.0"
-k = "0.16"
-log = "0.3.8"
-nalgebra = "0.18.0"
-ncollide3d = "0.19.0"
+k = { path = "../k", version = "0.17" }
+log = "0.4"
+nalgebra = "0.21"
+ncollide3d = "0.23"
 rand = "0.3.0"
 rrt = "0.4.0"
-urdf-rs = "0.4.0"
+urdf-rs = "0.4"
 trajectory = "0.0.1"
-num-traits = "0.1"
-assimp = "0.3.0"
+num-traits = "0.2"
+assimp = "0.3"
 
 [dev-dependencies]
-env_logger = "0.4.2"
-structopt = "0.2.0"
-kiss3d = "0.20"
-urdf-viz = { version = "0.16", path = "../urdf-viz" }
+env_logger = "0.7"
+structopt = "0.3"
+kiss3d = "0.24"
+urdf-viz = { version = "0.17", path = "../urdf-viz" }
