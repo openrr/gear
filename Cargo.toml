@@ -28,4 +28,4 @@ assimp = "0.3"
 env_logger = "0.7"
 structopt = "0.3"
 kiss3d = "0.24"
-urdf-viz = { version = "0.17", path = "../urdf-viz" }
+urdf-viz = "0.17"
