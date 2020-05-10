@@ -283,7 +283,7 @@ pub trait FromUrdf {
 /// # Example
 ///
 /// ```
-/// let pairs = gear::parse_colon_separated_pairs(&vec!["ab:cd".to_owned(), "ab:ef".to_owned()]).unwrap();
+/// let pairs = gear::collision::parse_colon_separated_pairs(&vec!["ab:cd".to_owned(), "ab:ef".to_owned()]).unwrap();
 /// assert_eq!(pairs.len(), 2);
 /// assert_eq!(pairs[0].0, "ab");
 /// assert_eq!(pairs[0].1, "cd");
