@@ -349,7 +349,7 @@ struct Opt {
 }
 
 fn main() -> Result<(), gear::Error> {
-    env_logger::init().unwrap();
+    env_logger::init();
     let opt = Opt::from_args();
     let mut app = CollisionAvoidApp::new(
         &opt.robot_urdf_path,

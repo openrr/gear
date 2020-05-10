@@ -58,7 +58,7 @@ where
 /// The input vec is clamped to the limits.
 pub fn set_clamped_joint_positions<T>(chain: &k::Chain<T>, vec: &[T]) -> Result<()>
 where
-    T: RealField,
+    T: RealField + k::SubsetOf<f64>,
 {
     let limits = chain.iter_joints().map(|j| j.limits).collect::<Vec<_>>();
     let clamped = generate_clamped_joint_positions_from_limits(vec, &limits)?;
@@ -165,11 +165,9 @@ where
 }
 
 /// Set random joint angles
-pub fn set_random_joint_positions<T>(
-    robot: &k::Chain<T>,
-) -> ::std::result::Result<(), k::JointError>
+pub fn set_random_joint_positions<T>(robot: &k::Chain<T>) -> ::std::result::Result<(), k::Error>
 where
-    T: RealField,
+    T: RealField + k::SubsetOf<f64>,
 {
     let limits = robot.iter_joints().map(|j| j.limits).collect();
     robot.set_joint_positions(&generate_random_joint_positions_from_limits(&limits))

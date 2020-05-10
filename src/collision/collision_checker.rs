@@ -39,7 +39,7 @@ where
 
 impl<'a, 'b, T> EnvCollisionNames<'a, 'b, T>
 where
-    T: RealField,
+    T: RealField + k::SubsetOf<f64>,
 {
     pub fn new(
         checker: &'a CollisionChecker<T>,
@@ -61,7 +61,7 @@ where
 
 impl<'a, 'b, T> Iterator for EnvCollisionNames<'a, 'b, T>
 where
-    T: RealField,
+    T: RealField + k::SubsetOf<f64>,
 {
     type Item = String;
     fn next(&mut self) -> Option<String> {
@@ -109,7 +109,7 @@ where
 
 impl<'a, T> SelfCollisionPairs<'a, T>
 where
-    T: RealField,
+    T: RealField + k::SubsetOf<f64>,
 {
     pub fn new(
         checker: &'a CollisionChecker<T>,
@@ -128,7 +128,7 @@ where
 
 impl<'a, T> Iterator for SelfCollisionPairs<'a, T>
 where
-    T: RealField,
+    T: RealField + k::SubsetOf<f64>,
 {
     type Item = (String, String);
     fn next(&mut self) -> Option<(String, String)> {
@@ -192,7 +192,7 @@ where
 
 impl<T> CollisionChecker<T>
 where
-    T: RealField,
+    T: RealField + k::SubsetOf<f64>,
 {
     /// Create CollisionChecker from HashMap
     pub fn new(name_collision_model_map: NameShapeMap<T>, prediction: T) -> Self {

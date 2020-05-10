@@ -24,7 +24,7 @@ use ncollide3d::shape::Compound;
 pub struct JointPathPlannerWithIK<T, I>
 where
     I: k::InverseKinematicsSolver<T>,
-    T: RealField,
+    T: RealField + k::SubsetOf<f64>,
 {
     /// Joint Path Planner to be used to find collision free path
     ///
@@ -36,7 +36,8 @@ where
 
 impl<T, I> JointPathPlannerWithIK<T, I>
 where
-    T: RealField + num_traits::Float,
+    //T: RealField + num_traits::Float + k::SubsetOf<f64>,
+    T: RealField + k::SubsetOf<f64> + num_traits::Float,
     I: k::InverseKinematicsSolver<T>,
 {
     /// Create instance from `JointPathPlannerBuilder` and `InverseKinematicsSolver`

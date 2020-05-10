@@ -16,6 +16,7 @@ limitations under the License.
 use crate::collision::CollisionChecker;
 use crate::errors::*;
 use crate::funcs::*;
+use log::*;
 use na::RealField;
 use nalgebra as na;
 use ncollide3d::shape::Compound;
@@ -24,7 +25,7 @@ use std::path::Path;
 /// Collision Avoidance Path Planner
 pub struct JointPathPlanner<N>
 where
-    N: RealField,
+    N: RealField + k::SubsetOf<f64>,
 {
     /// Instance of `k::HasLinks` to check the collision
     pub collision_check_robot: k::Chain<N>,
@@ -44,7 +45,7 @@ where
 
 impl<N> JointPathPlanner<N>
 where
-    N: RealField + num_traits::Float,
+    N: RealField + num_traits::Float + k::SubsetOf<f64>,
 {
     /// Create `JointPathPlanner`
     pub fn new(
@@ -70,10 +71,13 @@ where
         joint_positions: &[N],
         objects: &Compound<N>,
     ) -> bool {
-        if using_joints.set_joint_positions(joint_positions).is_err() {
-            return false;
+        match using_joints.set_joint_positions(joint_positions) {
+            Ok(()) => !self.has_any_colliding(objects),
+            Err(err) => {
+                debug!("is_feasible: {}", err);
+                false
+            }
         }
-        !self.has_any_colliding(objects)
     }
     /// Check if there are any colliding links
     pub fn has_any_colliding(&self, objects: &Compound<N>) -> bool {
@@ -125,11 +129,13 @@ where
             using_joints.set_joint_positions(&current_angles)?;
             return Err(Error::Collision {
                 part: CollisionPart::Start,
+                collision_link_names: self.colliding_link_names(objects),
             });
         } else if !self.is_feasible(using_joints, goal_angles, objects) {
             using_joints.set_joint_positions(&current_angles)?;
             return Err(Error::Collision {
                 part: CollisionPart::End,
+                collision_link_names: self.colliding_link_names(objects),
             });
         }
         let mut path = match rrt::dual_rrt_connect(
@@ -185,7 +191,7 @@ where
 
 impl<N> JointPathPlannerBuilder<N>
 where
-    N: RealField + num_traits::Float,
+    N: RealField + num_traits::Float + k::SubsetOf<f64>,
 {
     /// Create from components
     ///
@@ -235,7 +241,7 @@ where
 
 impl<N> JointPathPlannerBuilder<N>
 where
-    N: RealField,
+    N: RealField + k::SubsetOf<f64>,
 {
     /// Try to create `JointPathPlannerBuilder` instance from URDF file and end link name
     pub fn from_urdf_file<P>(file: P) -> Result<JointPathPlannerBuilder<N>>
@@ -264,7 +270,7 @@ fn get_joint_path_planner_builder_from_urdf<N>(
     collision_checker: CollisionChecker<N>,
 ) -> Result<JointPathPlannerBuilder<N>>
 where
-    N: RealField,
+    N: RealField + k::SubsetOf<f64>,
 {
     Ok(JointPathPlannerBuilder {
         collision_check_robot: (&urdf_robot).into(),

@@ -6,20 +6,20 @@ use std::path::Path;
 
 pub(crate) fn load_mesh<P, T>(filename: P, scale: &[f64]) -> Result<TriMesh<T>>
 where
-    P: AsRef<Path>,
+    P: AsRef<Path> + std::fmt::Debug,
     T: RealField,
 {
     let mut importer = assimp::Importer::new();
     importer.pre_transform_vertices(|x| x.enable = true);
     importer.collada_ignore_up_direction(true);
-    let file_string = filename
-        .as_ref()
-        .to_str()
-        .ok_or("faild to get string from path".to_owned())?;
-    Ok(assimp_scene_to_ncollide_mesh(
-        importer.read_file(file_string)?,
-        scale,
-    ))
+    if let Some(file_string) = filename.as_ref().to_str() {
+        match importer.read_file(file_string) {
+            Ok(assimp_scene) => Ok(assimp_scene_to_ncollide_mesh(assimp_scene, scale)),
+            Err(err) => Err(Error::MeshError(err.to_owned())),
+        }
+    } else {
+        Err(Error::MeshError(format!("failed to parse {:?}", filename)))
+    }
 }
 
 pub(crate) fn assimp_scene_to_ncollide_mesh<T>(scene: assimp::Scene, scale: &[f64]) -> TriMesh<T>

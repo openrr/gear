@@ -30,61 +30,39 @@ pub enum Error {
     Other { error: String },
     #[error("Node name {} not found", .0)]
     NotFound(String),
-    #[error("Collision error: {:?} is colliding", part)]
-    Collision { part: CollisionPart },
-    #[error("IO error {:?}", error)]
-    Io { error: io::Error },
+    #[error(
+        "Collision error: {:?} is colliding ({:?})",
+        collision_link_names,
+        part
+    )]
+    Collision {
+        part: CollisionPart,
+        collision_link_names: Vec<String>,
+    },
+    #[error("IO error {:?}", source)]
+    Io {
+        #[from]
+        source: io::Error,
+    },
     #[error("DoF mismatch {} != {}", .0, .1)]
     DofMismatch(usize, usize),
-    #[error("URDF error: {:?}", error)]
-    Urdf { error: urdf_rs::UrdfError },
-    #[error("IK error: {:?}", error)]
-    Ik { error: k::IKError },
+    #[error("URDF error: {:?}", source)]
+    Urdf {
+        #[from]
+        source: urdf_rs::UrdfError,
+    },
     #[error("Path not found {}", .0)]
     PathPlanFail(String),
-    #[error("Joint error: {:?}", error)]
-    Joint { error: k::JointError },
+    #[error("Kinematics error: {:?}", source)]
+    KinematicsError {
+        #[from]
+        source: k::Error,
+    },
     #[error("failed to parse {}", .0)]
     ParseError(String),
+    #[error("Mesh error {}", .0)]
+    MeshError(String),
 }
 
 /// Result for `gear`
 pub type Result<T> = ::std::result::Result<T, Error>;
-
-impl From<io::Error> for Error {
-    fn from(error: io::Error) -> Error {
-        Error::Io { error }
-    }
-}
-
-impl<'a> From<&'a str> for Error {
-    fn from(err: &'a str) -> Error {
-        Error::Other {
-            error: err.to_owned(),
-        }
-    }
-}
-
-impl From<String> for Error {
-    fn from(error: String) -> Error {
-        Error::Other { error }
-    }
-}
-
-impl From<urdf_rs::UrdfError> for Error {
-    fn from(error: urdf_rs::UrdfError) -> Error {
-        Error::Urdf { error }
-    }
-}
-
-impl From<k::IKError> for Error {
-    fn from(error: k::IKError) -> Error {
-        Error::Ik { error }
-    }
-}
-
-impl From<k::JointError> for Error {
-    fn from(error: k::JointError) -> Error {
-        Error::Joint { error }
-    }
-}

@@ -16,7 +16,7 @@ limitations under the License.
 #![allow(clippy::trivially_copy_pass_by_ref)]
 
 use crate::funcs::*;
-use k::InverseKinematicsSolver;
+use k::{InverseKinematicsSolver, SubsetOf};
 use na::RealField;
 use nalgebra as na;
 
@@ -50,7 +50,7 @@ where
 
 impl<T, I> InverseKinematicsSolver<T> for RandomInitializeIKSolver<T, I>
 where
-    T: RealField,
+    T: RealField + SubsetOf<f64>,
     I: InverseKinematicsSolver<T>,
 {
     fn solve_with_constraints(
@@ -58,9 +58,11 @@ where
         arm: &k::SerialChain<T>,
         target_pose: &na::Isometry3<T>,
         constraints: &k::Constraints,
-    ) -> ::std::result::Result<(), k::IKError> {
-        let mut result = Err(k::IKError::NotConvergedError {
-            error: "fail".to_owned(),
+    ) -> ::std::result::Result<(), k::Error> {
+        let mut result = Err(k::Error::NotConvergedError {
+            num_tried: 0,
+            position_diff: na::Vector3::new(0.0, 0.0, 0.0),
+            rotation_diff: na::Vector3::new(0.0, 0.0, 0.0),
         });
         let limits = arm.iter_joints().map(|j| j.limits).collect();
         let initial_angles = arm.joint_positions();
@@ -93,7 +95,7 @@ pub fn get_reachable_region<T, I>(
     unit_check_length: T,
 ) -> Vec<na::Isometry3<T>>
 where
-    T: RealField,
+    T: RealField + k::SubsetOf<f64>,
     I: InverseKinematicsSolver<T>,
 {
     let initial_angles = arm.joint_positions();
