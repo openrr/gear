@@ -82,7 +82,7 @@ where
     /// Check if there are any colliding links
     pub fn has_any_colliding(&self, objects: &Compound<N>) -> bool {
         for shape in objects.shapes() {
-            if self
+            if !self
                 .collision_checker
                 .check_env(&self.collision_check_robot, &*shape.1, &shape.0)
                 .next()
