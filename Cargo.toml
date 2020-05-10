@@ -13,7 +13,7 @@ edition="2018"
 
 [dependencies]
 thiserror = "1.0"
-k = { path = "../k", version = "0.17" }
+k = "0.17"
 log = "0.4"
 nalgebra = "0.21"
 ncollide3d = "0.23"
