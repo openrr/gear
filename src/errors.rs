@@ -30,14 +30,15 @@ pub enum Error {
     Other { error: String },
     #[error("Node name {} not found", .0)]
     NotFound(String),
-    #[error(
-        "Collision error: {:?} is colliding ({:?})",
-        collision_link_names,
-        part
-    )]
+    #[error("Collision error: {collision_link_names:?} is colliding ({part:?})")]
     Collision {
         part: CollisionPart,
         collision_link_names: Vec<String>,
+    },
+    #[error("Self Collision error: {collision_link_names:?} is colliding ({part:?})")]
+    SelfCollision {
+        part: CollisionPart,
+        collision_link_names: Vec<(String, String)>,
     },
     #[error("IO error {:?}", source)]
     Io {
