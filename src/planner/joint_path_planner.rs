@@ -278,7 +278,9 @@ where
     /// Create from components
     ///
     /// There are also some utility functions to create from urdf
-    pub fn new(collision_check_robot: k::Chain<N>, collision_checker: CollisionChecker<N>) -> Self {
+    pub fn new(urdf_robot: urdf_rs::Robot, collision_checker: CollisionChecker<N>) -> Self {
+        let collision_check_robot = (&urdf_robot).into();
+        let urdf_robot = Some(urdf_robot);
         JointPathPlannerBuilder {
             collision_check_robot,
             collision_checker,
@@ -286,7 +288,7 @@ where
             max_try: 5000,
             num_smoothing: 100,
             collision_check_margin: None,
-            urdf_robot: None,
+            urdf_robot,
             self_collision_pairs: vec![],
         }
     }
@@ -360,10 +362,7 @@ fn get_joint_path_planner_builder_from_urdf<N>(
 where
     N: RealField + k::SubsetOf<f64> + num_traits::Float,
 {
-    Ok(JointPathPlannerBuilder::new(
-        (&urdf_robot).into(),
-        collision_checker,
-    ))
+    Ok(JointPathPlannerBuilder::new(urdf_robot, collision_checker))
 }
 
 #[cfg(test)]
