@@ -116,7 +116,7 @@ where
                     .solve_with_constraints(arm, &target_pose, &constraints)
                     .is_ok()
                 {
-                    solved_poses.push(target_pose.clone());
+                    solved_poses.push(target_pose);
                 }
                 x += unit_check_length;
             }

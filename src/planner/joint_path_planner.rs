@@ -85,11 +85,11 @@ where
     /// Check if there are any colliding links
     pub fn has_any_colliding(&self, objects: &Compound<N>) -> bool {
         for shape in objects.shapes() {
-            if !self
+            if self
                 .collision_checker
                 .check_env(&self.collision_check_robot, &*shape.1, &shape.0)
                 .next()
-                .is_none()
+                .is_some()
             {
                 return true;
             }
@@ -121,11 +121,10 @@ where
     }
     /// Check if there are any colliding links
     pub fn has_any_colliding_with_self(&self) -> bool {
-        !self
-            .collision_checker
+        self.collision_checker
             .check_self(&self.collision_check_robot, &self.self_collision_pairs)
             .next()
-            .is_none()
+            .is_some()
     }
     /// Get the names of colliding links
     pub fn colliding_link_names_with_self(&self) -> Vec<(String, String)> {
