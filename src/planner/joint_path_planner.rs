@@ -367,10 +367,8 @@ where
 #[cfg(test)]
 mod tests {
     use super::*;
-    use na;
     use na::{Isometry3, Vector3};
     use ncollide3d::shape::Cuboid;
-    use urdf_rs;
 
     #[test]
     fn collision_check() {
