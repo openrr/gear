@@ -77,7 +77,7 @@ impl CollisionAvoidApp {
                 .path_planner
                 .collision_check_robot
                 .find(end_link_name)
-                .expect(&format!("{} not found", end_link_name));
+                .unwrap_or_else(|| panic!("{} not found", end_link_name));
             k::SerialChain::from_end(end_link)
         };
         let ik_target_pose = arm.end_transform();
@@ -141,8 +141,8 @@ impl CollisionAvoidApp {
             }
             std::thread::sleep(std::time::Duration::from_millis(10));
             for event in self.viewer.events().iter() {
-                match event.value {
-                    WindowEvent::Key(code, Action::Press, mods) => match code {
+                if let WindowEvent::Key(code, Action::Press, mods) = event.value {
+                    match code {
                         Key::U => {
                             self.ik_target_pose = self.arm.end_transform();
                             self.update_ik_target();
@@ -311,8 +311,7 @@ impl CollisionAvoidApp {
                             println!("finished reachable region calculation");
                         }
                         _ => {}
-                    },
-                    _ => {}
+                    }
                 }
             }
         }

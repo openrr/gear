@@ -312,8 +312,7 @@ mod test {
     use super::parse_colon_separated_pairs;
     #[test]
     fn test_parse_colon_separated_pairs() {
-        let pairs =
-            parse_colon_separated_pairs(&vec!["j0:j1".to_owned(), "j2:j0".to_owned()]).unwrap();
+        let pairs = parse_colon_separated_pairs(&["j0:j1".to_owned(), "j2:j0".to_owned()]).unwrap();
         assert_eq!(pairs.len(), 2);
         assert_eq!(pairs[0].0, "j0");
         assert_eq!(pairs[0].1, "j1");
