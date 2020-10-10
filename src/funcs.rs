@@ -53,6 +53,10 @@ where
         .collect())
 }
 
+#[deprecated(
+    since = "0.7.0",
+    note = "Please use k::Chain::set_joint_positions_clamped"
+)]
 /// Set joint positions safely
 ///
 /// The input vec is clamped to the limits.
