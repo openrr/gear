@@ -165,6 +165,12 @@ where
         });
         t = t + unit_duration;
     }
+    // Add final point
+    ret.push(TrajectoryPoint {
+        position: spline.position(total_duration)?,
+        velocity: spline.velocity(total_duration)?,
+        acceleration: spline.acceleration(total_duration)?,
+    });
     Some(ret)
 }
 
