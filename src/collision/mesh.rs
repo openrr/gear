@@ -1,9 +1,11 @@
 use crate::errors::*;
 use k::RealField;
+#[cfg(feature = "assimp")]
 use nalgebra as na;
 use ncollide3d::shape::TriMesh;
 use std::path::Path;
 
+#[cfg(feature = "assimp")]
 pub(crate) fn load_mesh<P, T>(filename: P, scale: &[f64]) -> Result<TriMesh<T>>
 where
     P: AsRef<Path> + std::fmt::Debug,
@@ -22,6 +24,19 @@ where
     }
 }
 
+#[cfg(not(feature = "assimp"))]
+pub(crate) fn load_mesh<P, T>(filename: P, _scale: &[f64]) -> Result<TriMesh<T>>
+where
+    P: AsRef<Path> + std::fmt::Debug,
+    T: RealField,
+{
+    Err(Error::MeshError(format!(
+        "assimp feature is disabled: could not parse {:?}",
+        filename
+    )))
+}
+
+#[cfg(feature = "assimp")]
 pub(crate) fn assimp_scene_to_ncollide_mesh<T>(scene: assimp::Scene, scale: &[f64]) -> TriMesh<T>
 where
     T: RealField,
