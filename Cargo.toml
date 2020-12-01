@@ -32,4 +32,4 @@ assimp = { version = "0.3", optional = true }
 env_logger = "0.7"
 structopt = "0.3"
 kiss3d = "0.24"
-urdf-viz = "0.18"
+urdf-viz = "0.21"
