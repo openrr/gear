@@ -17,7 +17,7 @@ use-assimp = [ "assimp" ]
 
 [dependencies]
 thiserror = "1.0"
-k = "0.18"
+k = "0.20"
 log = "0.4"
 nalgebra = "0.21"
 ncollide3d = "0.23"
