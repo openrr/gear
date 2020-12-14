@@ -22,7 +22,11 @@ use ncollide3d::{
     query,
     shape::{Compound, Shape, ShapeHandle},
 };
-use std::{collections::HashMap, path::Path};
+use std::{
+    collections::HashMap,
+    path::Path,
+    time::{Duration, Instant},
+};
 type NameShapeMap<T> = HashMap<String, Vec<(ShapeHandle<T>, na::Isometry3<T>)>>;
 
 /// Check collision between robot and object
@@ -105,6 +109,7 @@ where
     collision_check_robot: &'a k::Chain<T>,
     self_collision_pairs: &'a [(String, String)],
     index: usize,
+    used_duration: HashMap<String, Duration>,
 }
 
 impl<'a, T> SelfCollisionPairs<'a, T>
@@ -122,7 +127,12 @@ where
             collision_check_robot,
             self_collision_pairs,
             index: 0,
+            used_duration: HashMap::new(),
         }
+    }
+    /// Get the information about which part is the most heaviest.
+    pub fn used_duration(&self) -> &HashMap<String, Duration> {
+        &self.used_duration
     }
 }
 
@@ -161,6 +171,7 @@ where
         let obj_vec2 = obj_vec2_opt.unwrap();
         let node1 = node1_opt.unwrap();
         let node2 = node2_opt.unwrap();
+        let mut last_time = Instant::now();
         for obj1 in obj_vec1 {
             for obj2 in obj_vec2 {
                 let trans1 = node1.world_transform().unwrap();
@@ -172,6 +183,16 @@ where
                 if dist < self.checker.prediction {
                     return Some((j1.to_owned(), j2.to_owned()));
                 }
+                let elapsed = last_time.elapsed();
+                *self
+                    .used_duration
+                    .entry(j1.to_owned())
+                    .or_insert_with(|| Duration::from_nanos(0)) += elapsed;
+                *self
+                    .used_duration
+                    .entry(j2.to_owned())
+                    .or_insert_with(|| Duration::from_nanos(0)) += elapsed;
+                last_time = Instant::now();
             }
         }
         self.next()
