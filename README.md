@@ -1,4 +1,7 @@
-# gear [![Build Status](https://travis-ci.org/OTL/gear.svg?branch=master)](https://travis-ci.org/OTL/gear) [![crates.io](https://img.shields.io/crates/v/gear.svg)](https://crates.io/crates/gear)
+# gear [![Build Status](https://travis-ci.org/openrr/gear.svg?branch=master)](https://travis-ci.org/openrr/gear) [![crates.io](https://img.shields.io/crates/v/gear.svg)](https://crates.io/crates/gear)
+
+**WARNING!: Development of `gear` is stopped and moved into [openrr/openrr-planner](https://github.com/openrr/openrr/tree/main/openrr-planner). It is the same except for the package name now.**
+
 
 Collision Avoidance Path Planning for robotics in Rust-lang
 
